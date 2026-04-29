@@ -1,95 +1,182 @@
 import React from "react";
+import cassetteImg from "../assets/cas3.avif";
+import vinylImg from "../assets/vin.avif";
+import cdsImg from "../assets/cd.avif";
+import tshirtImg from "../assets/t.webp";
 
-export default function Footer() {
+// ข้อมูลสำหรับ Genre Chips
+const GENRES = [
+  "Rock",
+  "Alternative",
+  "Electronic",
+  "Metal",
+  "Pop",
+  "Jazz",
+  "Hip-hop / Rap",
+  "Blues",
+  "Classical",
+  "J-pop",
+  "K-pop",
+  "Thai",
+  "R&B",
+  "หมอลำ",
+  "EDM",
+  "Anime",
+  "DnB",
+];
+
+// ข้อมูลสำหรับหมวดหมู่สินค้า
+const CATEGORIES = [
+  {
+    id: 1,
+    title: "CASSETTES",
+    img: cassetteImg,
+  },
+  { id: 2, title: "VINYL", img: vinylImg },
+  { id: 3, title: "CDS", img: cdsImg },
+  {
+    id: 4,
+    title: "T-SHIRTS",
+    img: tshirtImg,
+  },
+];
+
+const Footer = () => {
   return (
-    <footer style={styles.footer}>
-      <div style={styles.container}>
-        <div style={styles.section}>
-          <h3 style={styles.title}>เกี่ยวกับเรา</h3>
-          <p style={styles.text}>
-            เว็บไซต์ขายเครื่องดนตรีออนไลน์ สินค้าคุณภาพดี ราคาถูก
-          </p>
-        </div>
-        <div style={styles.section}>
-          <h3 style={styles.title}>ลิงก์</h3>
-          <ul style={styles.list}>
-            <li>
-              <a href="#" style={styles.link}>
-                หน้าหลัก
-              </a>
-            </li>
-            <li>
-              <a href="#" style={styles.link}>
-                สินค้า
-              </a>
-            </li>
-            <li>
-              <a href="#" style={styles.link}>
-                ติดต่อเรา
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div style={styles.section}>
-          <h3 style={styles.title}>ติดต่อ</h3>
-          <p style={styles.text}>📍 กรุงเทพมหานคร</p>
-          <p style={styles.text}>📞 02-123-4567</p>
-          <p style={styles.text}>✉️ info@musicstore.com</p>
-        </div>
+    <footer style={styles.footerContainer}>
+      {/* 1. Genre Chips Section */}
+      <div style={styles.genreWrapper}>
+        {GENRES.map((genre, index) => (
+          <button key={index} style={styles.genreChip}>
+            {genre}
+          </button>
+        ))}
+        {/* แถวที่สอง (ตามตัวอย่างภาพมีการซ้ำบางส่วน) */}
+        {GENRES.slice(5, 17).map((genre, index) => (
+          <button key={`row2-${index}`} style={styles.genreChip}>
+            {genre}
+          </button>
+        ))}
       </div>
-      <div style={styles.copyright}>
-        © 2026 Music Store. All rights reserved.
+
+      {/* 2. Category Cards Section */}
+      <div style={styles.categoryWrapper}>
+        {CATEGORIES.map((item) => (
+          <div key={item.id} style={styles.card}>
+            <img src={item.img} alt={item.title} style={styles.cardImg} />
+            <div style={styles.cardOverlay}>
+              <span style={styles.cardTitle}>{item.title}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 3. Bottom Links & Bar */}
+      <div style={styles.bottomSection}>
+        <nav style={styles.navLinks}>
+          <a href="#about" style={styles.link}>
+            About us
+          </a>
+          <a href="#help" style={styles.link}>
+            Help
+          </a>
+          <a href="#terms" style={styles.link}>
+            Terms and conditions
+          </a>
+        </nav>
+
+        {/* แถบยาวด้านล่างสุด */}
+        <div style={styles.bottomBar}></div>
       </div>
     </footer>
   );
-}
+};
 
+// Inline Styles (เพื่อให้จบในไฟล์เดียว หรือนำไปแยกใส่ CSS ภายหลังได้)
 const styles = {
-  footer: {
-    backgroundColor: "#333",
+  footerContainer: {
+    backgroundColor: "#0a0a14",
+    padding: "60px 40px 30px 40px",
     color: "#fff",
-    padding: "40px 20px 20px",
-    marginTop: "50px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   },
-  container: {
+  genreWrapper: {
     display: "flex",
     flexWrap: "wrap",
-    justifyContent: "space-around",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    gap: "30px",
+    gap: "12px",
+    justifyContent: "center",
+    maxWidth: "1000px",
+    marginBottom: "60px",
   },
-  section: {
-    flex: "1 1 250px",
-    minWidth: "200px",
-  },
-  title: {
-    fontSize: "18px",
-    marginBottom: "15px",
-    color: "#f0c040",
-  },
-  text: {
+  genreChip: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    borderRadius: "20px",
+    color: "#e0e0e0",
+    padding: "6px 20px",
     fontSize: "14px",
-    lineHeight: "1.6",
-    margin: "8px 0",
+    cursor: "pointer",
   },
-  list: {
-    listStyle: "none",
-    padding: 0,
+  categoryWrapper: {
+    display: "flex",
+    gap: "20px",
+    marginBottom: "80px",
+  },
+  card: {
+    width: "180px",
+    height: "180px",
+    borderRadius: "12px",
+    overflow: "hidden",
+    position: "relative",
+    cursor: "pointer",
+    backgroundColor: "#1a1a2a",
+  },
+  cardImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    opacity: "0.6",
+  },
+  cardOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingBottom: "20px",
+  },
+  cardTitle: {
+    fontWeight: "bold",
+    letterSpacing: "1px",
+    fontSize: "14px",
+  },
+  bottomSection: {
+    width: "100%",
+    maxWidth: "1100px",
+  },
+  navLinks: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginBottom: "40px",
   },
   link: {
-    color: "#fff",
+    color: "#8e8e9e",
     textDecoration: "none",
-    fontSize: "14px",
-    display: "block",
-    margin: "8px 0",
+    fontSize: "13px",
+    width: "fit-content",
   },
-  copyright: {
-    textAlign: "center",
-    paddingTop: "20px",
-    marginTop: "30px",
-    borderTop: "1px solid #555",
-    fontSize: "14px",
-    color: "#aaa",
+  bottomBar: {
+    width: "100%",
+    height: "24px",
+    backgroundColor: "#2a2a3a",
+    borderRadius: "12px",
   },
 };
+
+export default Footer;
