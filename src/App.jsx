@@ -5,6 +5,7 @@ import AboutPage from "./pages/About";
 import Article1Page from "./pages/article1";
 import Article2Page from "./pages/article2";
 import Article3Page from "./pages/article3";
+import RadioPage from "./pages/RadioPage";
 import LoginPage from "./pages/LoginPage";
 import FanRegisterPage from "./pages/FanRegisterPage";
 import ArtistRegisterPage from "./pages/ArtistRegisterPage";
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/article1" element={<Article1Page />} />
           <Route path="/article2" element={<Article2Page />} />
           <Route path="/article3" element={<Article3Page />} />
+          <Route path="/radio" element={<RadioPage />} />
           <Route element={<ShopLayout />}>
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/discover/:genres" element={<ShopPage />} />

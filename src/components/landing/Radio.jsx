@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import albumCover from "../../assets/landing-page/album-cover-1.jpg";
 import audioSrc from "../../assets/audio.mp3";
 import coverPoster from "../../assets/landing-page/cover1.jpg";
@@ -158,15 +159,20 @@ function Radio() {
           <h2 className="px-4 pb-3 pt-6 font-['Montserrat',sans-serif] text-[28px] font-bold text-slate-900">
             Audtlist Radio
           </h2>
-          <img
-            className="block aspect-video w-full object-cover"
-            src={coverPoster}
-            alt="Nightmares show poster"
-          />
+          <Link to="/radio" aria-label="Open The Nightmares Show radio page">
+            <img
+              className="block aspect-video w-full cursor-pointer object-cover"
+              src={coverPoster}
+              alt="Nightmares show poster"
+            />
+          </Link>
           <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <p className="font-['Montserrat',sans-serif] text-sm font-semibold uppercase tracking-[0.04em] text-slate-500">
+            <Link
+              className="font-['Montserrat',sans-serif] text-sm font-semibold uppercase tracking-[0.04em] text-slate-500 no-underline transition-colors duration-150 hover:text-slate-900 hover:underline"
+              to="/radio"
+            >
               The Nightmares Show
-            </p>
+            </Link>
             <span className="rounded-full bg-red-500 px-3 py-1 font-['Montserrat',sans-serif] text-xs font-bold uppercase tracking-[0.08em] text-white">
               Live
             </span>
@@ -294,6 +300,12 @@ function Radio() {
             Tune into curated independent releases and switch between radio
             previews without leaving the station.
           </p>
+          <Link
+            className="mb-6 inline-flex rounded-full bg-[#0a0a1a] px-5 py-2.5 font-['Montserrat',sans-serif] text-sm font-semibold text-white no-underline transition-colors hover:bg-[#4f46e5]"
+            to="/radio"
+          >
+            Open station
+          </Link>
 
           <div className="flex flex-col gap-2">
             {tracks.map((track, index) => {
