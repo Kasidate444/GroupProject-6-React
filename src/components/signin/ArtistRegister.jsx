@@ -2,6 +2,20 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import logoB from "../../assets/landing-page/logob.png";
 
+const EyeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+
 const ARTIST_GENRES = [
   "Rock", "Alternative", "Electronic", "Metal", "Pop", "Jazz",
   "Hip-hop / Rap", "Blues", "Classical", "J-pop", "K-pop", "Thai",
@@ -50,6 +64,8 @@ export default function ArtistRegister({ onGoLogIn, onGoFan, onRegister }) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -226,19 +242,29 @@ export default function ArtistRegister({ onGoLogIn, onGoFan, onRegister }) {
             <div className="ka-row">
               <div className="ka-field">
                 <label className="ka-label" htmlFor="artist-password">Password</label>
-                <input
-                  id="artist-password"
-                  className="ka-input"
-                  type="password"
-                  name="new-password"
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={(e) => updateField("password", e.target.value)}
-                  aria-invalid={!!errors.password}
-                  aria-describedby={errors.password ? "artist-password-error" : "artist-password-hint"}
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    id="artist-password"
+                    className="ka-input"
+                    type={showPassword ? "text" : "password"}
+                    name="new-password"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={(e) => updateField("password", e.target.value)}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? "artist-password-error" : "artist-password-hint"}
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#475569] hover:text-[#64748b] transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
                 {errors.password ? (
                   <p id="artist-password-error" className="ka-hint ka-hint--error">{errors.password}</p>
                 ) : (
@@ -248,18 +274,28 @@ export default function ArtistRegister({ onGoLogIn, onGoFan, onRegister }) {
 
               <div className="ka-field">
                 <label className="ka-label" htmlFor="artist-confirm-password">Confirm password</label>
-                <input
-                  id="artist-confirm-password"
-                  className="ka-input"
-                  type="password"
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  value={form.confirmPassword}
-                  onChange={(e) => updateField("confirmPassword", e.target.value)}
-                  aria-invalid={!!errors.confirmPassword}
-                  aria-describedby={errors.confirmPassword ? "artist-confirm-password-error" : undefined}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    id="artist-confirm-password"
+                    className="ka-input"
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={(e) => updateField("confirmPassword", e.target.value)}
+                    aria-invalid={!!errors.confirmPassword}
+                    aria-describedby={errors.confirmPassword ? "artist-confirm-password-error" : undefined}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#475569] hover:text-[#64748b] transition-colors"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
                 {errors.confirmPassword && (
                   <p id="artist-confirm-password-error" className="ka-hint ka-hint--error">{errors.confirmPassword}</p>
                 )}
