@@ -1,7 +1,25 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { validateMerchForm, MERCH_TYPES } from "../utils/uploadValidationMerch";
 import { validateCoverFile } from "../utils/uploadValidation";
 import { apiUpload } from "../lib/api";
+
+const createVariant = () => ({
+  id: `variant-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  size: "",
+  color: "",
+  stock: "0",
+  sku: "",
+});
+
+const buildVariantPayload = (variants) => variants.map((variant, index) => ({
+  variantId: variant.sku.trim() || `variant-${index + 1}`,
+  size: variant.size.trim(),
+  color: variant.color.trim(),
+  stock: Number(variant.stock),
+  sku: variant.sku.trim(),
+}));
+
+const getTotalStock = (variants) => variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
 
 export default function UploadMerchForm({ onCancel, onSuccess }) {
   const [form, setForm] = useState({
@@ -11,6 +29,9 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
     type: "tshirt",
     description: "",
     price: "",
+    weightGrams: "",
+    shipsInternationally: false,
+    variants: [createVariant()],
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -23,6 +44,31 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
       const next = { ...prev };
       delete next[name];
       return next;
+    });
+  };
+
+  const updateVariant = (id, name, value) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((variant) => variant.id === id ? { ...variant, [name]: value } : variant),
+    }));
+    setErrors((prev) => {
+      if (!prev.variants && !prev.variantRows) return prev;
+      const next = { ...prev };
+      delete next.variants;
+      delete next.variantRows;
+      return next;
+    });
+  };
+
+  const addVariant = () => {
+    setForm((prev) => ({ ...prev, variants: [...prev.variants, createVariant()] }));
+  };
+
+  const removeVariant = (id) => {
+    setForm((prev) => {
+      if (prev.variants.length === 1) return prev;
+      return { ...prev, variants: prev.variants.filter((variant) => variant.id !== id) };
     });
   };
 
@@ -57,12 +103,17 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
     setSubmitting(true);
 
     try {
+      const variants = buildVariantPayload(form.variants);
       const fd = new FormData();
       fd.append("cover", form.cover);
       fd.append("title", form.title.trim());
       fd.append("merchType", form.type);
       fd.append("description", form.description.trim());
       fd.append("price", form.price);
+      fd.append("stock", String(getTotalStock(form.variants)));
+      fd.append("variants", JSON.stringify(variants));
+      fd.append("weightGrams", form.weightGrams === "" ? "" : String(Number(form.weightGrams)));
+      fd.append("shipsInternationally", String(form.shipsInternationally));
 
       const result = await apiUpload("/products/merch", fd);
 
@@ -76,6 +127,8 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
       setSubmitting(false);
     }
   };
+
+  const totalStock = getTotalStock(form.variants);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -146,17 +199,103 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
         {errors.description && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.description}</p>}
       </div>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Price (THB) *</label>
+          <input
+            type="number"
+            value={form.price}
+            onChange={(e) => updateField("price", e.target.value)}
+            placeholder="750"
+            min={0}
+            className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.price ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+          />
+          {errors.price && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.price}</p>}
+        </div>
+
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Weight (grams)</label>
+          <input
+            type="number"
+            value={form.weightGrams}
+            onChange={(e) => updateField("weightGrams", e.target.value)}
+            placeholder="250"
+            min={0}
+            className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.weightGrams ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+          />
+          {errors.weightGrams && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.weightGrams}</p>}
+        </div>
+
+        <div className="flex items-end">
+          <label className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 cursor-pointer select-none">
+            <span className="text-[13px] text-white/85">Ships internationally</span>
+            <input type="checkbox" checked={form.shipsInternationally} onChange={(e) => updateField("shipsInternationally", e.target.checked)} className="w-4 h-4 accent-[#fc3c44]" />
+          </label>
+        </div>
+      </div>
+
       <div>
-        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Price (THB) *</label>
-        <input
-          type="number"
-          value={form.price}
-          onChange={(e) => updateField("price", e.target.value)}
-          placeholder="750"
-          min={0}
-          className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.price ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
-        />
-        {errors.price && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.price}</p>}
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50">Variants *</label>
+            <p className="mt-1 text-[11px] text-white/30">Total stock: {totalStock}</p>
+          </div>
+          <button type="button" onClick={addVariant} className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white">
+            Add variant
+          </button>
+        </div>
+
+        <div className={`space-y-2 rounded-lg border p-3 ${errors.variants ? "border-[#fc3c44]" : "border-white/10"}`}>
+          {form.variants.map((variant, index) => {
+            const rowError = errors.variantRows?.[index] || {};
+            return (
+              <div key={variant.id} className="grid grid-cols-2 gap-2 md:grid-cols-[1fr_1fr_110px_1fr_auto]">
+                <input
+                  type="text"
+                  value={variant.size}
+                  onChange={(e) => updateVariant(variant.id, "size", e.target.value)}
+                  placeholder="Size"
+                  maxLength={40}
+                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                />
+                <input
+                  type="text"
+                  value={variant.color}
+                  onChange={(e) => updateVariant(variant.id, "color", e.target.value)}
+                  placeholder="Color"
+                  maxLength={40}
+                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                />
+                <input
+                  type="number"
+                  value={variant.stock}
+                  onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                  placeholder="Stock"
+                  min={0}
+                  className={`rounded-lg border bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30 ${rowError.stock ? "border-[#fc3c44]" : "border-white/10"}`}
+                />
+                <input
+                  type="text"
+                  value={variant.sku}
+                  onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
+                  placeholder="SKU"
+                  maxLength={80}
+                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeVariant(variant.id)}
+                  disabled={form.variants.length === 1}
+                  className="rounded-lg border border-white/10 px-3 py-2 text-[12px] text-white/50 transition-colors hover:border-[#fc3c44]/50 hover:text-[#fc3c44] disabled:cursor-not-allowed disabled:opacity-35 md:w-20"
+                >
+                  Remove
+                </button>
+                {rowError.stock && <p className="col-span-2 text-[11px] text-[#fc3c44] md:col-span-5">{rowError.stock}</p>}
+              </div>
+            );
+          })}
+        </div>
+        {errors.variants && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.variants}</p>}
       </div>
 
       <div className="flex items-center justify-end gap-2.5 pt-2">

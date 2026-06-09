@@ -146,6 +146,8 @@ function CartItem({ item, onRemove, onUpdateQty }) {
   const [expanded, setExpanded] = useState(false);
   const product = findProductById(item.product_id);
   const genres = getArtistGenres(item.artist_id);
+  const isDigital = item.type === "single" || item.type === "album";
+  const productPath = `/product/${item.product_slug || product?.slug || item.product_id}`;
 
   return (
     <div className="rounded-xl bg-white/4 border border-white/[0.05] overflow-hidden">
@@ -188,23 +190,29 @@ function CartItem({ item, onRemove, onUpdateQty }) {
             </p>
 
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center rounded-md overflow-hidden border border-white/10 bg-white/5">
-                <button
-                  onClick={() => onUpdateQty(item.quantity - 1)}
-                  className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold"
-                >
-                  −
-                </button>
-                <span className="w-7 text-center text-white/85 font-semibold text-[13px]">
-                  {item.quantity}
+              {isDigital ? (
+                <span className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  Qty 1
                 </span>
-                <button
-                  onClick={() => onUpdateQty(item.quantity + 1)}
-                  className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold"
-                >
-                  +
-                </button>
-              </div>
+              ) : (
+                <div className="flex items-center rounded-md overflow-hidden border border-white/10 bg-white/5">
+                  <button
+                    onClick={() => onUpdateQty(item.quantity - 1)}
+                    className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="w-7 text-center text-white/85 font-semibold text-[13px]">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => onUpdateQty(item.quantity + 1)}
+                    className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
               <p className="text-white/85 font-semibold text-[15px]">
                 {formatPrice(item.unit_price * item.quantity)}
               </p>
@@ -243,10 +251,10 @@ function CartItem({ item, onRemove, onUpdateQty }) {
           {/* Buttons */}
           <div className="flex gap-2">
             <Link
-              to={`/product/${product?.slug}`}
+              to={productPath}
               className="flex-1 text-center py-2 rounded-full bg-white text-bg text-[12px] font-semibold no-underline hover:bg-white/90 transition-colors"
             >
-              Go to album
+              View product
             </Link>
             <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full border border-white/15 text-white/60 text-[12px] font-medium hover:border-white/30 hover:text-white/85 transition-all">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
