@@ -1,19 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  formatPrice,
-  getAllProductsWithArtist,
-  searchProducts,
-} from "../../shop/data/helpers";
+import { formatPrice } from "../../shop/data/helpers";
+import { apiGet } from "../../lib/api";
 
 export default function SearchBar() {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
+  const [results, setResults] = useState([]);
 
   const query = input.trim();
-  const products = useMemo(() => getAllProductsWithArtist(), []);
-  const results = query ? searchProducts(products, query).slice(0, 6) : [];
   const showResults = focused && query.length > 0;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!query) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiGet(`/products?q=${encodeURIComponent(query)}&limit=6`);
+        if (!cancelled) setResults(response.data || []);
+      } catch {
+        if (!cancelled) setResults([]);
+      }
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [query]);
+
+  const visibleResults = query ? results : [];
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -64,12 +86,12 @@ export default function SearchBar() {
           className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-[420px] overflow-y-auto rounded-xl border border-white/10 bg-[#111118]/95 py-2 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
           onMouseDown={(event) => event.preventDefault()}
         >
-          {results.length === 0 ? (
+          {visibleResults.length === 0 ? (
             <div className="px-4 py-5 text-center text-sm text-white/55">
               No results for "{query}"
             </div>
           ) : (
-            results.map((product) => (
+            visibleResults.map((product) => (
               <Link
                 key={product._id}
                 to={`/product/${product.slug}`}

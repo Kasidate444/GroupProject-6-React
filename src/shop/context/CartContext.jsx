@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from "react";
-import { findArtistById } from "../data/helpers";
 import { FIXED_SHIPPING_THB } from "../data/constants";
+import { getArtistName } from "../utils/productShape";
 
 export const CartContext = createContext(null);
 
@@ -26,7 +26,7 @@ export function CartProvider({ children }) {
           product_id: product._id,
           artist_id: product.artist_id,
           title_snapshot: product.title,
-          artist_name_snapshot: findArtistById(product.artist_id)?.name || "Unknown",
+          artist_name_snapshot: getArtistName(product),
           unit_price: unitPrice,
           quantity,
           variant_id: variantId,

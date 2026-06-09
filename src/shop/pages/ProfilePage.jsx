@@ -4,14 +4,18 @@ import { useAuth } from "../../hooks/useAuth";
 import { useFollow } from "../../contexts/FollowContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useCollection } from "../context/CollectionContext";
-import { findArtistById, getProductWithDetails } from "../data/helpers";
+import { getProductWithDetails } from "../data/helpers";
 import { apiGet, apiUpload } from "../../lib/api";
+import FollowButton from "../components/FollowButton";
+import ProductCard from "../components/product/ProductCard";
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
   const { collectionIds } = useCollection();
-  const { followedArtistIds } = useFollow();
-  const { wishlistedIds } = useWishlist();
+  const { followedArtistIds, setFollowedArtists } = useFollow();
+  const { wishlistedIds, setWishlistedProducts } = useWishlist();
+  const [followingArtists, setFollowingArtists] = useState([]);
+  const [wishlistProducts, setWishlistProducts] = useState([]);
 
   const [activeTab, setActiveTab] = useState("collection");
   const [bannerUrl, setBannerUrl] = useState("");
@@ -56,6 +60,14 @@ export default function ProfilePage() {
         });
         setAvatarUrl(nextProfile.profile_picture_url);
         setBannerUrl(nextProfile.banner_picture_url);
+        const nextFollowingArtists = profile.followingArtist || [];
+        setFollowingArtists(nextFollowingArtists);
+        setFollowedArtists(nextFollowingArtists.map((artist) => artist._id));
+        const nextWishlistProducts = (profile.wishlist || [])
+          .map((item) => normalizeProfileProduct(item.product_id))
+          .filter(Boolean);
+        setWishlistProducts(nextWishlistProducts);
+        setWishlistedProducts(nextWishlistProducts.map((product) => product._id));
       } catch (err) {
         if (!cancelled) {
           setProfileStatus("error");
@@ -71,7 +83,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, setFollowedArtists, setWishlistedProducts]);
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
 
@@ -336,13 +348,13 @@ export default function ProfilePage() {
           )}
           {activeTab === "following" && (
             <ArtistGrid
-              ids={followedArtistIds}
+              artists={followingArtists.filter((artist) => followedArtistIds.includes(artist._id))}
               emptyMessage="Not following any artists yet"
             />
           )}
           {activeTab === "wishlist" && (
-            <ProductGrid
-              ids={wishlistedIds}
+            <WishlistGrid
+              products={wishlistProducts.filter((product) => wishlistedIds.includes(product._id))}
               emptyMessage="No items in wishlist"
             />
           )}
@@ -350,6 +362,31 @@ export default function ProfilePage() {
       </div>
     </div>
   );
+}
+
+function normalizeProfileProduct(product) {
+  if (!product) return null;
+
+  return {
+    ...product,
+    artist_id: product.artist?._id || product.artist_id || product.artist,
+    artist: product.artist
+      ? {
+          ...product.artist,
+          name: product.artist.display_name || product.artist.username,
+          slug: product.artist.username,
+          genres: product.artist.genre
+            ? [{ _id: product.artist.genre, slug: product.artist.genre, name: product.artist.genre }]
+            : [],
+        }
+      : product.artist,
+    merch_type: product.merchType || product.merch_type,
+    cover_url: product.cover_url || product.coverUrl?.url,
+    name_your_price: product.name_your_price ?? product.nameYourPrice,
+    min_price: product.min_price ?? product.minPrice,
+    release_date: product.release_date ?? product.releaseDate,
+    tracks: product.tracks || [],
+  };
 }
 
 function ProductGrid({ ids, emptyMessage }) {
@@ -390,9 +427,28 @@ function ProductGrid({ ids, emptyMessage }) {
   );
 }
 
-function ArtistGrid({ ids, emptyMessage }) {
-  const artists = ids.map((id) => findArtistById(id)).filter(Boolean);
+function WishlistGrid({ products, emptyMessage }) {
+  if (products.length === 0) {
+    return (
+      <div className="py-8">
+        <p className="text-white/40 text-[14px]">{emptyMessage}</p>
+        <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
+          Browse the shop →
+        </Link>
+      </div>
+    );
+  }
 
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
+      {products.map((product) => (
+        <ProductCard key={product._id} product={product} contextQueue={products} />
+      ))}
+    </div>
+  );
+}
+
+function ArtistGrid({ artists, emptyMessage }) {
   if (artists.length === 0) {
     return (
       <div className="py-8">
@@ -407,26 +463,29 @@ function ArtistGrid({ ids, emptyMessage }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
       {artists.map((artist) => (
-        <Link
-          key={artist._id}
-          to={`/artist/${artist.slug}`}
-          className="flex flex-col gap-2 no-underline group"
-        >
+        <div key={artist._id} className="flex flex-col gap-2">
+          <Link to={`/artist/${artist.slug || artist.username || artist._id}`} className="flex flex-col gap-2 no-underline group">
           <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
-            <img
-              src={artist.banner_url}
-              alt={artist.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
+            {artist.banner_picture?.url || artist.profile_picture?.url ? (
+              <img
+                src={artist.banner_picture?.url || artist.profile_picture?.url}
+                alt={artist.display_name || artist.username}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full bg-white/[0.06]" />
+            )}
           </div>
           <div>
             <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
-              {artist.name}
+              {artist.display_name || artist.username}
             </p>
-            <p className="text-white/40 text-[11px] truncate">{artist.location}</p>
+            <p className="text-white/40 text-[11px] truncate">{artist.genre || "Artist"}</p>
           </div>
-        </Link>
+          </Link>
+          <FollowButton artistId={artist._id} size="sm" />
+        </div>
       ))}
     </div>
   );
