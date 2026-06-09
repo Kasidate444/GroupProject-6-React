@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet } from "../../lib/api";
 import { formatPrice } from "../../shop/data/helpers";
@@ -135,7 +136,7 @@ export default function SearchBar() {
                 )}
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">
-                    {product.title}
+                    {product.title || product.name}
                   </div>
                   <div className="truncate text-xs text-white/50">
                     {getArtistName(product)} · {product.type}
