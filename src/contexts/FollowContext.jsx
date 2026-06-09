@@ -1,8 +1,13 @@
-﻿/* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { apiPatch } from "../lib/api";
 
 const FollowContext = createContext(null);
+
+const persistFollowedArtists = (next) => {
+  localStorage.setItem("followedArtists", JSON.stringify([...next]));
+  return next;
+};
 
 export function FollowProvider({ children }) {
   const [ids, setIds] = useState(() => {
@@ -14,28 +19,30 @@ export function FollowProvider({ children }) {
     }
   });
 
-  const persist = (next) => {
-    localStorage.setItem("followedArtists", JSON.stringify([...next]));
-    return next;
-  };
+  const setFollowedArtists = useCallback((artistIds = []) => {
+    setIds(persistFollowedArtists(new Set(artistIds.filter(Boolean))));
+  }, []);
 
-  const setFollowedArtists = (artistIds = []) => {
-    setIds(persist(new Set(artistIds.filter(Boolean))));
-  };
-
-  const setLocalFollow = (artistId, followed) => {
+  const setLocalFollow = useCallback((artistId, followed) => {
     setIds((prev) => {
       const next = new Set(prev);
       if (followed) next.add(artistId);
       else next.delete(artistId);
-      return persist(next);
+      return persistFollowedArtists(next);
     });
-  };
+  }, []);
 
-  const toggleFollow = async (artistId) => {
+  const toggleFollow = useCallback(async (artistId) => {
     if (!artistId) return;
-    const wasFollowing = ids.has(artistId);
-    setLocalFollow(artistId, !wasFollowing);
+
+    let wasFollowing = false;
+    setIds((prev) => {
+      wasFollowing = prev.has(artistId);
+      const next = new Set(prev);
+      if (wasFollowing) next.delete(artistId);
+      else next.add(artistId);
+      return persistFollowedArtists(next);
+    });
 
     try {
       const result = await apiPatch(`/artists/${artistId}/follow`);
@@ -46,17 +53,20 @@ export function FollowProvider({ children }) {
       setLocalFollow(artistId, wasFollowing);
       throw error;
     }
-  };
+  }, [setLocalFollow]);
 
-  const isFollowing = (artistId) => ids.has(artistId);
-  const followedArtistIds = [...ids];
-  const followCount = ids.size;
+  const value = useMemo(() => {
+    const followedArtistIds = [...ids];
+    return {
+      toggleFollow,
+      isFollowing: (artistId) => ids.has(artistId),
+      followedArtistIds,
+      followCount: ids.size,
+      setFollowedArtists,
+    };
+  }, [ids, setFollowedArtists, toggleFollow]);
 
-  return (
-    <FollowContext.Provider value={{ toggleFollow, isFollowing, followedArtistIds, followCount, setFollowedArtists }}>
-      {children}
-    </FollowContext.Provider>
-  );
+  return <FollowContext.Provider value={value}>{children}</FollowContext.Provider>;
 }
 
 export function useFollow() {

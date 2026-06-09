@@ -1,8 +1,13 @@
-﻿/* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { apiRequest } from "../../lib/api";
 
 const WishlistContext = createContext(null);
+
+const persistWishlist = (next) => {
+  localStorage.setItem("wishlist", JSON.stringify([...next]));
+  return next;
+};
 
 export function WishlistProvider({ children }) {
   const [ids, setIds] = useState(() => {
@@ -14,28 +19,30 @@ export function WishlistProvider({ children }) {
     }
   });
 
-  const persist = (next) => {
-    localStorage.setItem("wishlist", JSON.stringify([...next]));
-    return next;
-  };
+  const setWishlistedProducts = useCallback((productIds = []) => {
+    setIds(persistWishlist(new Set(productIds.filter(Boolean))));
+  }, []);
 
-  const setWishlistedProducts = (productIds = []) => {
-    setIds(persist(new Set(productIds.filter(Boolean))));
-  };
-
-  const setLocalWishlist = (productId, wishlisted) => {
+  const setLocalWishlist = useCallback((productId, wishlisted) => {
     setIds((prev) => {
       const next = new Set(prev);
       if (wishlisted) next.add(productId);
       else next.delete(productId);
-      return persist(next);
+      return persistWishlist(next);
     });
-  };
+  }, []);
 
-  const toggleWishlist = async (productId) => {
+  const toggleWishlist = useCallback(async (productId) => {
     if (!productId) return;
-    const wasWishlisted = ids.has(productId);
-    setLocalWishlist(productId, !wasWishlisted);
+
+    let wasWishlisted = false;
+    setIds((prev) => {
+      wasWishlisted = prev.has(productId);
+      const next = new Set(prev);
+      if (wasWishlisted) next.delete(productId);
+      else next.add(productId);
+      return persistWishlist(next);
+    });
 
     try {
       const result = await apiRequest(`/products/${productId}/wishlist`, { method: "PATCH" });
@@ -46,16 +53,16 @@ export function WishlistProvider({ children }) {
       setLocalWishlist(productId, wasWishlisted);
       throw error;
     }
-  };
+  }, [setLocalWishlist]);
 
-  const isWishlisted = (productId) => ids.has(productId);
-  const wishlistedIds = [...ids];
+  const value = useMemo(() => ({
+    toggleWishlist,
+    isWishlisted: (productId) => ids.has(productId),
+    wishlistedIds: [...ids],
+    setWishlistedProducts,
+  }), [ids, setWishlistedProducts, toggleWishlist]);
 
-  return (
-    <WishlistContext.Provider value={{ toggleWishlist, isWishlisted, wishlistedIds, setWishlistedProducts }}>
-      {children}
-    </WishlistContext.Provider>
-  );
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }
 
 export function useWishlist() {
