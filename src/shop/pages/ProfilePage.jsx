@@ -3,17 +3,15 @@ import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useFollow } from "../../contexts/FollowContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useCollection } from "../context/CollectionContext";
+import { findArtistById, getProductWithDetails } from "../data/helpers";
 import { apiGet, apiUpload } from "../../lib/api";
-import FollowButton from "../components/FollowButton";
-import ProductCard from "../components/product/ProductCard";
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
-  const { followedArtistIds, setFollowedArtists } = useFollow();
-  const { wishlistedIds, setWishlistedProducts } = useWishlist();
-  const [followingArtists, setFollowingArtists] = useState([]);
-  const [wishlistProducts, setWishlistProducts] = useState([]);
-  const [collectionProducts, setCollectionProducts] = useState([]);
+  const { collectionIds } = useCollection();
+  const { followedArtistIds } = useFollow();
+  const { wishlistedIds } = useWishlist();
 
   const [activeTab, setActiveTab] = useState("collection");
   const [bannerUrl, setBannerUrl] = useState("");
@@ -58,18 +56,6 @@ export default function ProfilePage() {
         });
         setAvatarUrl(nextProfile.profile_picture_url);
         setBannerUrl(nextProfile.banner_picture_url);
-        const nextCollectionProducts = (profile.user_collection || profile.collection || [])
-          .map((item) => normalizeProfileProduct(item.product_id || item))
-          .filter(Boolean);
-        setCollectionProducts(nextCollectionProducts);
-        const nextFollowingArtists = profile.followingArtist || [];
-        setFollowingArtists(nextFollowingArtists);
-        setFollowedArtists(nextFollowingArtists.map((artist) => artist._id));
-        const nextWishlistProducts = (profile.wishlist || [])
-          .map((item) => normalizeProfileProduct(item.product_id))
-          .filter(Boolean);
-        setWishlistProducts(nextWishlistProducts);
-        setWishlistedProducts(nextWishlistProducts.map((product) => product._id));
       } catch (err) {
         if (!cancelled) {
           setProfileStatus("error");
@@ -85,7 +71,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn, setFollowedArtists, setWishlistedProducts]);
+  }, [isLoggedIn]);
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
 
@@ -187,14 +173,14 @@ export default function ProfilePage() {
   };
 
   const tabs = [
-    { key: "collection", label: "collection", count: collectionProducts.length },
+    { key: "collection", label: "collection", count: collectionIds.length },
     { key: "following", label: "following", count: followedArtistIds.length },
     { key: "wishlist", label: "wishlist", count: wishlistedIds.length },
   ];
 
   return (
     <div className="min-h-screen bg-bg font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* 笏笏 Banner 笏笏 */}
+      {/* ── Banner ── */}
       <div
         className={`relative h-75 bg-cover bg-center bg-white/5 group ${isEditingProfile ? "cursor-pointer" : ""}`}
         style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : {}}
@@ -217,7 +203,7 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* 笏笏 Profile info 笏笏 */}
+      {/* ── Profile info ── */}
       <div className="px-[5%] -mt-20 relative z-10 md:px-[10%]">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           {/* Avatar */}
@@ -318,7 +304,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 笏笏 Tabs + Content 笏笏 */}
+      {/* ── Tabs + Content ── */}
       <div className="mt-10 px-[5%] md:px-[10%]">
         {/* Tab bar */}
         <div className="flex items-center gap-1 border-b border-white/10">
@@ -344,19 +330,19 @@ export default function ProfilePage() {
         <div className="py-8">
           {activeTab === "collection" && (
             <ProductGrid
-              products={collectionProducts}
+              ids={collectionIds}
               emptyMessage="No purchases yet"
             />
           )}
           {activeTab === "following" && (
             <ArtistGrid
-              artists={followingArtists.filter((artist) => followedArtistIds.includes(artist._id))}
+              ids={followedArtistIds}
               emptyMessage="Not following any artists yet"
             />
           )}
           {activeTab === "wishlist" && (
-            <WishlistGrid
-              products={wishlistProducts.filter((product) => wishlistedIds.includes(product._id))}
+            <ProductGrid
+              ids={wishlistedIds}
               emptyMessage="No items in wishlist"
             />
           )}
@@ -366,38 +352,16 @@ export default function ProfilePage() {
   );
 }
 
-function normalizeProfileProduct(product) {
-  if (!product) return null;
+function ProductGrid({ ids, emptyMessage }) {
+  const products = ids.map((id) => getProductWithDetails(id)).filter(Boolean);
 
-  return {
-    ...product,
-    artist_id: product.artist?._id || product.artist_id || product.artist,
-    artist: product.artist
-      ? {
-          ...product.artist,
-          name: product.artist.display_name || product.artist.username,
-          slug: product.artist.username,
-          genres: product.artist.genre
-            ? [{ _id: product.artist.genre, slug: product.artist.genre, name: product.artist.genre }]
-            : [],
-        }
-      : product.artist,
-    merch_type: product.merchType || product.merch_type,
-    cover_url: product.cover_url || product.coverUrl?.url,
-    name_your_price: product.name_your_price ?? product.nameYourPrice,
-    min_price: product.min_price ?? product.minPrice,
-    release_date: product.release_date ?? product.releaseDate,
-    tracks: product.tracks || [],
-  };
-}
-
-function ProductGrid({ products, emptyMessage }) {
   if (products.length === 0) {
     return (
       <div className="py-8">
         <p className="text-white/40 text-[14px]">{emptyMessage}</p>
         <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Browse the shop</Link>
+          Browse the shop →
+        </Link>
       </div>
     );
   }
@@ -426,33 +390,16 @@ function ProductGrid({ products, emptyMessage }) {
   );
 }
 
-function WishlistGrid({ products, emptyMessage }) {
-  if (products.length === 0) {
-    return (
-      <div className="py-8">
-        <p className="text-white/40 text-[14px]">{emptyMessage}</p>
-        <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Browse the shop</Link>
-      </div>
-    );
-  }
+function ArtistGrid({ ids, emptyMessage }) {
+  const artists = ids.map((id) => findArtistById(id)).filter(Boolean);
 
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
-      {products.map((product) => (
-        <ProductCard key={product._id} product={product} contextQueue={products} />
-      ))}
-    </div>
-  );
-}
-
-function ArtistGrid({ artists, emptyMessage }) {
   if (artists.length === 0) {
     return (
       <div className="py-8">
         <p className="text-white/40 text-[14px]">{emptyMessage}</p>
         <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Discover artists</Link>
+          Discover artists →
+        </Link>
       </div>
     );
   }
@@ -460,32 +407,27 @@ function ArtistGrid({ artists, emptyMessage }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
       {artists.map((artist) => (
-        <div key={artist._id} className="flex flex-col gap-2">
-          <Link to={`/artist/${artist.slug || artist.username || artist._id}`} className="flex flex-col gap-2 no-underline group">
+        <Link
+          key={artist._id}
+          to={`/artist/${artist.slug}`}
+          className="flex flex-col gap-2 no-underline group"
+        >
           <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
-            {artist.banner_picture?.url || artist.profile_picture?.url ? (
-              <img
-                src={artist.banner_picture?.url || artist.profile_picture?.url}
-                alt={artist.display_name || artist.username}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full bg-white/[0.06]" />
-            )}
+            <img
+              src={artist.banner_url}
+              alt={artist.name}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
           </div>
           <div>
             <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
-              {artist.display_name || artist.username}
+              {artist.name}
             </p>
-            <p className="text-white/40 text-[11px] truncate">{artist.genre || "Artist"}</p>
+            <p className="text-white/40 text-[11px] truncate">{artist.location}</p>
           </div>
-          </Link>
-          <FollowButton artistId={artist._id} size="sm" />
-        </div>
+        </Link>
       ))}
     </div>
   );
 }
-
-

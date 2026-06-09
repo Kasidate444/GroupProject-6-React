@@ -4,10 +4,19 @@ import {
   useEffect,
   useState,
 } from "react";
-import { getArtistName, getFirstPlayableTrack, getTrackAudioSrc } from "../utils/productShape";
+import {
+  findTrackByProductId,
+  findAlbumByProductId,
+  findTrackById,
+  findArtistById,
+} from "../data/helpers";
 
 const getFirstTrack = (product) => {
-  return getFirstPlayableTrack(product);
+  if (product.type === "album") {
+    const album = findAlbumByProductId(product._id);
+    return album?.track_ids?.[0] ? findTrackById(album.track_ids[0]) : null;
+  }
+  return findTrackByProductId(product._id);
 };
 
 const AudioPlayerContext = createContext(null);
@@ -41,14 +50,13 @@ export function AudioPlayerProvider({ children }) {
     if (!q || q.length === 0 || idx < 0 || idx >= q.length) return;
     const product = q[idx];
     const track = getFirstTrack(product);
-    const audioSrc = getTrackAudioSrc(track);
-    if (!audioSrc) return;
+    if (!track || !track.audio_file_url) return;
 
     setCurrentProduct(product);
     setCurrentIndex(idx);
     setIsOpen(true);
 
-    audio.src = audioSrc;
+    audio.src = track.audio_file_url;
     audio.load();
     audio.play().catch((err) => console.error("Play failed:", err));
   };
@@ -124,12 +132,12 @@ export function AudioPlayerProvider({ children }) {
   const playProduct = (product, contextQueue = null) => {
     if (!product) return;
     const track = getFirstTrack(product);
-    if (!getTrackAudioSrc(track)) return;
+    if (!track || !track.audio_file_url) return;
 
     let playableQueue;
     let idx;
     if (contextQueue && Array.isArray(contextQueue)) {
-      playableQueue = contextQueue.filter((p) => getTrackAudioSrc(getFirstTrack(p)));
+      playableQueue = contextQueue.filter((p) => getFirstTrack(p));
       idx = playableQueue.findIndex((p) => p._id === product._id);
       if (idx < 0) {
         playableQueue = [product];
@@ -190,7 +198,9 @@ export function AudioPlayerProvider({ children }) {
     setDuration(0);
   };
 
-  const currentArtist = currentProduct?.artist || (currentProduct ? { name: getArtistName(currentProduct) } : null);
+  const currentArtist = currentProduct
+    ? findArtistById(currentProduct.artist_id)
+    : null;
 
   const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
   const hasPrev = currentIndex > 0;
