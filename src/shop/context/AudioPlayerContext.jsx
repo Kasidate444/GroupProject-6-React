@@ -1,67 +1,49 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import {
-  findTrackByProductId,
-  findAlbumByProductId,
-  findTrackById,
-  findArtistById,
-} from "../data/helpers";
-
-const getFirstTrack = (product) => {
-  if (product.type === "album") {
-    const album = findAlbumByProductId(product._id);
-    return album?.track_ids?.[0] ? findTrackById(album.track_ids[0]) : null;
-  }
-  return findTrackByProductId(product._id);
-};
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/refs */
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { findArtistById } from "../data/helpers";
+import { getFirstPlayableTrack, getTrackAudioSrc } from "../utils/productShape";
 
 const AudioPlayerContext = createContext(null);
+const getFirstTrack = (product) => getFirstPlayableTrack(product);
 
 export function AudioPlayerProvider({ children }) {
-  // === State ===
   const [isOpen, setIsOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState(null);
   const [queue, setQueue] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef(null);
 
-  // === audio element — สร้างครั้งเดียว ===
-  const [audio] = useState(() => {
-    const a = new Audio();
-    a.volume = 0.7;
-    return a;
-  });
+  if (!audioRef.current) {
+    audioRef.current = new Audio();
+    audioRef.current.volume = 0.7;
+  }
 
-  // ===========================================================================
-  // Core: เล่นเพลงจาก queue ที่ index ที่กำหนด
-  // (แยกเป็น internal — playNext/playPrev เรียกตัวนี้ จะได้ไม่ re-compute
-  //  queue/index ซ้ำเหมือนโค้ดเดิม ที่ทำให้ index เพี้ยน)
-  // ===========================================================================
-  const playAtIndex = (q, idx) => {
-    if (!q || q.length === 0 || idx < 0 || idx >= q.length) return;
-    const product = q[idx];
+  const audio = audioRef.current;
+
+  const playAtIndex = (nextQueue, index) => {
+    if (!nextQueue || nextQueue.length === 0 || index < 0 || index >= nextQueue.length) return;
+
+    const product = nextQueue[index];
     const track = getFirstTrack(product);
-    if (!track || !track.audio_file_url) return;
+    const audioSrc = getTrackAudioSrc(track);
+    if (!audioSrc) return;
 
     setCurrentProduct(product);
-    setCurrentIndex(idx);
+    setCurrentIndex(index);
     setIsOpen(true);
 
-    audio.src = track.audio_file_url;
+    audio.src = audioSrc;
     audio.load();
     audio.play().catch((err) => console.error("Play failed:", err));
   };
 
-  // === event listeners — ติดครั้งเดียวตอน mount ===
   useEffect(() => {
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => setDuration(audio.duration);
@@ -69,26 +51,25 @@ export function AudioPlayerProvider({ children }) {
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
-    const handleError = (e) => {
-      console.error("Audio error:", e);
+    const handleError = (event) => {
+      console.error("Audio error:", event);
       setIsLoading(false);
       setIsPlaying(false);
     };
 
-    // เพลงจบ → เล่นเพลงถัดไปใน queue อัตโนมัติ
     const handleEnded = () => {
-      setCurrentIndex((idx) => {
-        setQueue((q) => {
-          const nextIdx = idx + 1;
-          if (nextIdx < q.length) {
-            setTimeout(() => playAtIndex(q, nextIdx), 0);
+      setCurrentIndex((index) => {
+        setQueue((currentQueue) => {
+          const nextIndex = index + 1;
+          if (nextIndex < currentQueue.length) {
+            setTimeout(() => playAtIndex(currentQueue, nextIndex), 0);
           } else {
             audio.pause();
             audio.currentTime = 0;
           }
-          return q;
+          return currentQueue;
         });
-        return idx;
+        return index;
       });
     };
 
@@ -112,44 +93,33 @@ export function AudioPlayerProvider({ children }) {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // === Volume sync ===
   useEffect(() => {
     audio.volume = volume;
-  }, [audio, volume]);
+  }, [volume]);
 
-  // ===========================================================================
-  // Public API
-  // ===========================================================================
-
-  /**
-   * เล่นเพลง — ฟังก์ชันเดียวที่ทุกหน้าเรียกใช้
-   * @param {Object} product       product ที่จะเล่น
-   * @param {Array}  contextQueue  รายการ products รอบๆ (เพื่อ next/prev + Up Next)
-   */
   const playProduct = (product, contextQueue = null) => {
     if (!product) return;
     const track = getFirstTrack(product);
-    if (!track || !track.audio_file_url) return;
+    if (!getTrackAudioSrc(track)) return;
 
     let playableQueue;
-    let idx;
+    let index;
     if (contextQueue && Array.isArray(contextQueue)) {
-      playableQueue = contextQueue.filter((p) => getFirstTrack(p));
-      idx = playableQueue.findIndex((p) => p._id === product._id);
-      if (idx < 0) {
+      playableQueue = contextQueue.filter((item) => getTrackAudioSrc(getFirstTrack(item)));
+      index = playableQueue.findIndex((item) => item._id === product._id);
+      if (index < 0) {
         playableQueue = [product];
-        idx = 0;
+        index = 0;
       }
     } else {
       playableQueue = [product];
-      idx = 0;
+      index = 0;
     }
 
     setQueue(playableQueue);
-    playAtIndex(playableQueue, idx);
+    playAtIndex(playableQueue, index);
   };
 
   const togglePlay = () => {
@@ -163,10 +133,8 @@ export function AudioPlayerProvider({ children }) {
 
   const playNext = () => {
     if (queue.length === 0 || currentIndex < 0) return;
-    const nextIdx = currentIndex + 1;
-    if (nextIdx < queue.length) {
-      playAtIndex(queue, nextIdx);
-    }
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < queue.length) playAtIndex(queue, nextIndex);
   };
 
   const playPrev = () => {
@@ -174,11 +142,8 @@ export function AudioPlayerProvider({ children }) {
     playAtIndex(queue, currentIndex - 1);
   };
 
-  // เล่นเพลงตาม index ที่กดใน Up Next playlist
-  const playQueueIndex = (idx) => {
-    if (idx >= 0 && idx < queue.length) {
-      playAtIndex(queue, idx);
-    }
+  const playQueueIndex = (index) => {
+    if (index >= 0 && index < queue.length) playAtIndex(queue, index);
   };
 
   const seek = (time) => {
@@ -198,26 +163,34 @@ export function AudioPlayerProvider({ children }) {
     setDuration(0);
   };
 
-  const currentArtist = currentProduct
-    ? findArtistById(currentProduct.artist_id)
-    : null;
-
+  const currentArtist = currentProduct?.artist || (currentProduct ? findArtistById(currentProduct.artist_id) : null);
   const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
   const hasPrev = currentIndex > 0;
-
-  const isProductPlaying = (productId) =>
-    isPlaying && currentProduct?._id === productId;
+  const isProductPlaying = (productId) => isPlaying && currentProduct?._id === productId;
 
   return (
     <AudioPlayerContext.Provider
       value={{
-        isOpen, currentProduct, currentArtist,
-        queue, currentIndex,
-        isPlaying, currentTime, duration, volume, isLoading,
-        hasNext, hasPrev,
-        playProduct, togglePlay,
-        playNext, playPrev, playQueueIndex,
-        seek, setVolume, closePlayer,
+        isOpen,
+        currentProduct,
+        currentArtist,
+        queue,
+        currentIndex,
+        isPlaying,
+        currentTime,
+        duration,
+        volume,
+        isLoading,
+        hasNext,
+        hasPrev,
+        playProduct,
+        togglePlay,
+        playNext,
+        playPrev,
+        playQueueIndex,
+        seek,
+        setVolume,
+        closePlayer,
         isProductPlaying,
       }}
     >
@@ -227,8 +200,7 @@ export function AudioPlayerProvider({ children }) {
 }
 
 export const useAudioPlayer = () => {
-  const ctx = useContext(AudioPlayerContext);
-  if (!ctx)
-    throw new Error("useAudioPlayer must be used within AudioPlayerProvider");
-  return ctx;
+  const context = useContext(AudioPlayerContext);
+  if (!context) throw new Error("useAudioPlayer must be used within AudioPlayerProvider");
+  return context;
 };
