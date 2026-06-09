@@ -3,19 +3,17 @@ import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useFollow } from "../../contexts/FollowContext";
 import { useWishlist } from "../context/WishlistContext";
-import { useCollection } from "../context/CollectionContext";
-import { getProductWithDetails } from "../data/helpers";
 import { apiGet, apiUpload } from "../../lib/api";
 import FollowButton from "../components/FollowButton";
 import ProductCard from "../components/product/ProductCard";
 
 export default function ProfilePage() {
   const { user, isLoggedIn } = useAuth();
-  const { collectionIds } = useCollection();
   const { followedArtistIds, setFollowedArtists } = useFollow();
   const { wishlistedIds, setWishlistedProducts } = useWishlist();
   const [followingArtists, setFollowingArtists] = useState([]);
   const [wishlistProducts, setWishlistProducts] = useState([]);
+  const [collectionProducts, setCollectionProducts] = useState([]);
 
   const [activeTab, setActiveTab] = useState("collection");
   const [bannerUrl, setBannerUrl] = useState("");
@@ -60,6 +58,10 @@ export default function ProfilePage() {
         });
         setAvatarUrl(nextProfile.profile_picture_url);
         setBannerUrl(nextProfile.banner_picture_url);
+        const nextCollectionProducts = (profile.user_collection || profile.collection || [])
+          .map((item) => normalizeProfileProduct(item.product_id || item))
+          .filter(Boolean);
+        setCollectionProducts(nextCollectionProducts);
         const nextFollowingArtists = profile.followingArtist || [];
         setFollowingArtists(nextFollowingArtists);
         setFollowedArtists(nextFollowingArtists.map((artist) => artist._id));
@@ -185,14 +187,14 @@ export default function ProfilePage() {
   };
 
   const tabs = [
-    { key: "collection", label: "collection", count: collectionIds.length },
+    { key: "collection", label: "collection", count: collectionProducts.length },
     { key: "following", label: "following", count: followedArtistIds.length },
     { key: "wishlist", label: "wishlist", count: wishlistedIds.length },
   ];
 
   return (
     <div className="min-h-screen bg-bg font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* ── Banner ── */}
+      {/* 笏笏 Banner 笏笏 */}
       <div
         className={`relative h-75 bg-cover bg-center bg-white/5 group ${isEditingProfile ? "cursor-pointer" : ""}`}
         style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : {}}
@@ -215,7 +217,7 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* ── Profile info ── */}
+      {/* 笏笏 Profile info 笏笏 */}
       <div className="px-[5%] -mt-20 relative z-10 md:px-[10%]">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           {/* Avatar */}
@@ -316,7 +318,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Tabs + Content ── */}
+      {/* 笏笏 Tabs + Content 笏笏 */}
       <div className="mt-10 px-[5%] md:px-[10%]">
         {/* Tab bar */}
         <div className="flex items-center gap-1 border-b border-white/10">
@@ -342,7 +344,7 @@ export default function ProfilePage() {
         <div className="py-8">
           {activeTab === "collection" && (
             <ProductGrid
-              ids={collectionIds}
+              products={collectionProducts}
               emptyMessage="No purchases yet"
             />
           )}
@@ -389,16 +391,13 @@ function normalizeProfileProduct(product) {
   };
 }
 
-function ProductGrid({ ids, emptyMessage }) {
-  const products = ids.map((id) => getProductWithDetails(id)).filter(Boolean);
-
+function ProductGrid({ products, emptyMessage }) {
   if (products.length === 0) {
     return (
       <div className="py-8">
         <p className="text-white/40 text-[14px]">{emptyMessage}</p>
         <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Browse the shop →
-        </Link>
+          Browse the shop</Link>
       </div>
     );
   }
@@ -433,8 +432,7 @@ function WishlistGrid({ products, emptyMessage }) {
       <div className="py-8">
         <p className="text-white/40 text-[14px]">{emptyMessage}</p>
         <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Browse the shop →
-        </Link>
+          Browse the shop</Link>
       </div>
     );
   }
@@ -454,8 +452,7 @@ function ArtistGrid({ artists, emptyMessage }) {
       <div className="py-8">
         <p className="text-white/40 text-[14px]">{emptyMessage}</p>
         <Link to="/shop" className="text-accent text-[13px] hover:underline mt-1 inline-block">
-          Discover artists →
-        </Link>
+          Discover artists</Link>
       </div>
     );
   }
@@ -490,3 +487,5 @@ function ArtistGrid({ artists, emptyMessage }) {
     </div>
   );
 }
+
+
