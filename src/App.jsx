@@ -30,6 +30,7 @@ import OrderConfirmedPage from "./shop/pages/OrderConfirmedPage";
 import ProfileSetting from "./pages/profilesetting";
 import GiftCardsPage from "./pages/GiftCardsPage";
 import ClubPage from "./pages/ClubPage";
+import ClubDetailPage from "./pages/ClubDetailPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/gift-cards" element={<GiftCardsPage />} />
           <Route path="/club" element={<ClubPage />} />
+          <Route path="/club/:id" element={<ClubDetailPage />} />
           <Route path="/article1" element={<Article1Page />} />
           <Route path="/article2" element={<Article2Page />} />
           <Route path="/article3" element={<Article3Page />} />

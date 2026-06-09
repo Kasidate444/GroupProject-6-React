@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { deductStock } from '../../data/stockService.js';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, PAYMENT_METHODS, ORDER_STATUS } from './constants.js';
 import { validateShippingInformation, validateCreditCardDetails } from './validation.js';
 import { calculateCartSubtotal, calculateDiscountAmount, calculateOrderTotal, roundToTwoDecimals } from './calculations.js';
@@ -144,6 +145,8 @@ export default function OrderSubmissionProcessor({
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      deductStock(cartItems);
 
       // Simulate successful order creation
       const submittedOrder = {

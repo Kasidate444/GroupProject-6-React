@@ -6,7 +6,7 @@ import { useCollection } from "../context/CollectionContext";
 import { PAYMENT_METHODS } from "../components/checkout/constants.js";
 import { calculateDiscountAmount, roundToTwoDecimals } from "../components/checkout/calculations.js";
 import { FIXED_SHIPPING_THB } from "../data/constants.js";
-import { findMerchByProductId } from "../data/helpers.js";
+import { getMerchWithLiveStock } from "../data/stockService.js";
 import CartDisplay from "../components/checkout/CartDisplay.jsx";
 import ShippingForm from "../components/checkout/ShippingForm.jsx";
 import PaymentMethodSelector from "../components/checkout/PaymentMethodSelector.jsx";
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
     items.map((item) => {
       let isOutOfStock = false;
       if (item.type === "merch") {
-        const merchDetail = findMerchByProductId(item.product_id);
+        const merchDetail = getMerchWithLiveStock(item.product_id);
         if (merchDetail) {
           if (item.variant_id) {
             const v = merchDetail.variants.find((v) => v.variant_id === item.variant_id);
@@ -39,6 +39,7 @@ export default function CheckoutPage() {
       return {
         id: item.key,
         productId: item.product_id,
+        variantId: item.variant_id || null,
         name: item.title_snapshot,
         artist: item.artist_name_snapshot,
         image: item.cover_url || `https://via.placeholder.com/200x200/1a1a1a/ffffff?text=${encodeURIComponent(item.title_snapshot)}`,
