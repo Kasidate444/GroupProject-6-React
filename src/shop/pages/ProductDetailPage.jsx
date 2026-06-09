@@ -15,6 +15,7 @@ import {
   getArtistGenres,
   getProductsByArtist,
 } from "../data/helpers";
+import { getMerchWithLiveStock } from "../data/stockService.js";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -48,8 +49,9 @@ export default function ProductDetailPage() {
 
   const finalPrice = product.name_your_price ? customPrice : product.price;
 
-  // Stock checks for merch
-  const merchVariants = product.type === "merch" ? (product.detail?.variants || []) : [];
+  // Stock checks for merch — อ่านจาก service เพื่อให้เห็นสต๊อกที่อัพเดทแล้ว
+  const livemerch = product.type === "merch" ? getMerchWithLiveStock(product._id) : null;
+  const merchVariants = livemerch?.variants ?? (product.detail?.variants || []);
   const totalStock = merchVariants.reduce((s, v) => s + (v.stock_quantity || 0), 0);
   const isMerchSoldOut = product.type === "merch" && totalStock === 0;
   const isSelectedVariantOutOfStock = product.type === "merch" && selectedVariant?.stock_quantity === 0;
