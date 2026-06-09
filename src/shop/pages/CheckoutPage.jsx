@@ -43,7 +43,7 @@ export default function CheckoutPage() {
         artist: item.artist_name_snapshot,
         image: item.cover_url || `https://via.placeholder.com/200x200/1a1a1a/ffffff?text=${encodeURIComponent(item.title_snapshot)}`,
         unitPrice: item.unit_price,
-        quantity: item.quantity,
+        quantity: item.type === "merch" ? item.quantity : 1,
         type: item.type === "merch" ? "merchandise" : "digital",
         isOutOfStock,
       };
@@ -68,7 +68,7 @@ export default function CheckoutPage() {
 
   const handleQuantityChange = useCallback((itemId, newQuantity) => {
     setCartItems((prev) =>
-      prev.map((item) => item.id === itemId ? { ...item, quantity: newQuantity } : item)
+      prev.map((item) => item.id === itemId ? { ...item, quantity: item.type === "digital" ? 1 : newQuantity } : item)
     );
   }, []);
 
