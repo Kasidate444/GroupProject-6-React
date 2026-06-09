@@ -98,11 +98,12 @@ export default function ProductDetailPage() {
   const artistSlug = getArtistSlug(product);
   const artistName = getArtistName(product);
   const finalPrice = product.name_your_price ? customPrice : product.price;
-  const isDigitalProduct = product.type === "single" || product.type === "album";
-  const purchaseQty = isDigitalProduct ? 1 : qty;
-  const merchVariants = product.type === "merch" ? (product.detail?.variants || []) : [];
-  const totalStock = merchVariants.reduce((sum, variant) => sum + (variant.stock_quantity || 0), 0);
-  const isMerchSoldOut = product.type === "merch" && merchVariants.length > 0 && totalStock === 0;
+
+  // Stock checks for merch — อ่านจาก service เพื่อให้เห็นสต๊อกที่อัพเดทแล้ว
+  const livemerch = product.type === "merch" ? getMerchWithLiveStock(product._id) : null;
+  const merchVariants = livemerch?.variants ?? (product.detail?.variants || []);
+  const totalStock = merchVariants.reduce((s, v) => s + (v.stock_quantity || 0), 0);
+  const isMerchSoldOut = product.type === "merch" && totalStock === 0;
   const isSelectedVariantOutOfStock = product.type === "merch" && selectedVariant?.stock_quantity === 0;
   const addToCartDisabled = Boolean(priceError) || isMerchSoldOut || isSelectedVariantOutOfStock;
 
