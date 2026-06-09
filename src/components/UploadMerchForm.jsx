@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { validateMerchForm, MERCH_TYPES } from "../utils/uploadValidationMerch";
 import { validateCoverFile } from "../utils/uploadValidation";
 import { apiUpload } from "../lib/api";
+import VariantsBuilder from "./VariantsBuilder";
 
 export default function UploadMerchForm({ onCancel, onSuccess }) {
   const [form, setForm] = useState({
@@ -11,6 +12,10 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
     type: "tshirt",
     description: "",
     price: "",
+    stock: "",
+    variants: [],
+    weightGrams: "",
+    shipsInternationally: false,
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +50,21 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
     });
   };
 
+  const handleVariantsChange = (variants) => {
+    setForm((prev) => ({ ...prev, variants }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.variants;
+      delete next.stock;
+      return next;
+    });
+  };
+
+  const getTotalStock = () => {
+    if (form.variants.length === 0) return form.stock;
+    return form.variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+  };
+
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
 
@@ -63,6 +83,15 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
       fd.append("merchType", form.type);
       fd.append("description", form.description.trim());
       fd.append("price", form.price);
+      fd.append("stock", String(getTotalStock()));
+      fd.append("weightGrams", form.weightGrams);
+      fd.append("shipsInternationally", String(form.shipsInternationally));
+      fd.append("variants", JSON.stringify(form.variants.map((variant) => ({
+        size: variant.size.trim(),
+        color: variant.color.trim(),
+        stock: variant.stock,
+        sku: variant.sku.trim(),
+      }))));
 
       const result = await apiUpload("/products/merch", fd);
 
@@ -158,6 +187,49 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
         />
         {errors.price && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.price}</p>}
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">
+            Stock {form.variants.length === 0 ? "*" : ""}
+          </label>
+          <input
+            type="number"
+            value={form.variants.length > 0 ? getTotalStock() : form.stock}
+            onChange={(e) => updateField("stock", e.target.value)}
+            placeholder="50"
+            min={0}
+            disabled={form.variants.length > 0}
+            className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors disabled:opacity-55 disabled:cursor-not-allowed ${errors.stock ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+          />
+          {errors.stock && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.stock}</p>}
+        </div>
+
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Weight (grams)</label>
+          <input
+            type="number"
+            value={form.weightGrams}
+            onChange={(e) => updateField("weightGrams", e.target.value)}
+            placeholder="250"
+            min={0}
+            className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.weightGrams ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+          />
+          {errors.weightGrams && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.weightGrams}</p>}
+        </div>
+      </div>
+
+      <VariantsBuilder variants={form.variants} onChange={handleVariantsChange} error={errors.variants} />
+
+      <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={form.shipsInternationally}
+          onChange={(e) => updateField("shipsInternationally", e.target.checked)}
+          className="w-4 h-4 accent-[#fc3c44]"
+        />
+        <span className="text-[13px] text-white/85">Ships internationally</span>
+      </label>
 
       <div className="flex items-center justify-end gap-2.5 pt-2">
         {errors.submit && <p className="mr-auto text-[11px] text-[#fc3c44]">{errors.submit}</p>}
