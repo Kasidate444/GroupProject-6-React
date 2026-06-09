@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import VariantsBuilder from "./VariantsBuilder";
 import { validateMerchForm, MERCH_TYPES } from "../utils/uploadValidationMerch";
-import { validateCoverFile, formatBytes } from "../utils/uploadValidation";
+import { validateCoverFile } from "../utils/uploadValidation";
+import { apiUpload } from "../lib/api";
 
 export default function UploadMerchForm({ onCancel, onSuccess }) {
   const [form, setForm] = useState({
@@ -9,11 +9,8 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
     coverPreview: null,
     title: "",
     type: "tshirt",
-    weight: "",
     description: "",
     price: "",
-    shipsInternationally: true,
-    variants: [],
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -32,52 +29,56 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
   const handleCoverChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const err = validateCoverFile(file);
-    if (err) { setErrors((prev) => ({ ...prev, cover: err })); return; }
+    if (err) {
+      setErrors((prev) => ({ ...prev, cover: err }));
+      return;
+    }
+
     const previewUrl = URL.createObjectURL(file);
     setForm((prev) => ({ ...prev, cover: file, coverPreview: previewUrl }));
-    setErrors((prev) => { const next = { ...prev }; delete next.cover; return next; });
-  };
-
-  const handleVariantsChange = (newVariants) => {
-    setForm((prev) => ({ ...prev, variants: newVariants }));
-    setErrors((prev) => { const next = { ...prev }; delete next.variants; return next; });
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.cover;
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
+
     const { isValid, errors: formErrors } = validateMerchForm(form);
-    if (!isValid) { setErrors(formErrors); return; }
+    if (!isValid) {
+      setErrors(formErrors);
+      return;
+    }
+
     setSubmitting(true);
 
-    // TODO: replace with FormData + fetch('/api/products/merch') when backend is ready
-    const payload = {
-      type: "merch",
-      merch_type: form.type,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      base_price: Number(form.price),
-      weight_g: form.weight === "" ? 0 : Number(form.weight),
-      ships_internationally: form.shipsInternationally,
-      cover: form.cover ? { name: form.cover.name, size: formatBytes(form.cover.size), type: form.cover.type } : null,
-      variants: form.variants.map((v) => ({
-        size: v.size.trim() || null,
-        color: v.color.trim() || null,
-        stock: Number(v.stock),
-        sku: v.sku.trim() || null,
-      })),
-    };
+    try {
+      const fd = new FormData();
+      fd.append("cover", form.cover);
+      fd.append("title", form.title.trim());
+      fd.append("merchType", form.type);
+      fd.append("description", form.description.trim());
+      fd.append("price", form.price);
 
-    console.log("Upload Merch submitted:", payload);
-    await new Promise((r) => setTimeout(r, 800));
+      const result = await apiUpload("/products/merch", fd);
 
-    setSubmitting(false);
-    if (onSuccess) onSuccess(payload);
+      if (onSuccess) onSuccess(result.data);
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: err.message || "Upload failed",
+      }));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Cover + Title/Type/Weight */}
       <div className="grid grid-cols-[140px_1fr] gap-5">
         <div>
           <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Image *</label>
@@ -109,82 +110,57 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
               type="text"
               value={form.title}
               onChange={(e) => updateField("title", e.target.value)}
-              placeholder="e.g. Logo Tshirt"
+              placeholder="e.g. Logo T-shirt"
               maxLength={100}
               className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.title ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
             />
             {errors.title && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.title}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-1.5">Type *</label>
-              <select
-                value={form.type}
-                onChange={(e) => updateField("type", e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg bg-white/[0.05] border outline-none text-white text-[13px] transition-colors ${errors.type ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
-              >
-                {MERCH_TYPES.map((t) => (
-                  <option key={t.value} value={t.value} className="bg-[#141414]">{t.label}</option>
-                ))}
-              </select>
-              {errors.type && <p className="text-[11px] text-[#fc3c44] mt-1">{errors.type}</p>}
-            </div>
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-1.5">Weight (g)</label>
-              <input
-                type="number"
-                value={form.weight}
-                onChange={(e) => updateField("weight", e.target.value)}
-                placeholder="220"
-                min={0}
-                className={`w-full px-3 py-2 rounded-lg bg-white/[0.05] border outline-none text-white text-[13px] transition-colors ${errors.weight ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
-              />
-              {errors.weight && <p className="text-[11px] text-[#fc3c44] mt-1">{errors.weight}</p>}
-            </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-1.5">Type *</label>
+            <select
+              value={form.type}
+              onChange={(e) => updateField("type", e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg bg-white/[0.05] border outline-none text-white text-[13px] transition-colors ${errors.type ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+            >
+              {MERCH_TYPES.map((type) => (
+                <option key={type.value} value={type.value} className="bg-[#141414]">{type.label}</option>
+              ))}
+            </select>
+            {errors.type && <p className="text-[11px] text-[#fc3c44] mt-1">{errors.type}</p>}
           </div>
         </div>
       </div>
 
-      {/* Description */}
       <div>
-        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Description</label>
+        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Description *</label>
         <textarea
           value={form.description}
           onChange={(e) => updateField("description", e.target.value)}
           placeholder="Product description..."
-          rows={2}
+          rows={3}
           maxLength={500}
           className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[13px] resize-y transition-colors ${errors.description ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
         />
+        {errors.description && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.description}</p>}
       </div>
 
-      {/* Price + Ships internationally */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Base Price (THB) *</label>
-          <input
-            type="number"
-            value={form.price}
-            onChange={(e) => updateField("price", e.target.value)}
-            placeholder="750"
-            min={0}
-            className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.price ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
-          />
-          {errors.price && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.price}</p>}
-        </div>
-        <div className="flex items-end">
-          <label className="flex items-center gap-2 py-2.5 cursor-pointer select-none">
-            <input type="checkbox" checked={form.shipsInternationally} onChange={(e) => updateField("shipsInternationally", e.target.checked)} className="w-4 h-4 accent-[#fc3c44]" />
-            <span className="text-[13px] text-white/85">Ships internationally</span>
-          </label>
-        </div>
+      <div>
+        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Price (THB) *</label>
+        <input
+          type="number"
+          value={form.price}
+          onChange={(e) => updateField("price", e.target.value)}
+          placeholder="750"
+          min={0}
+          className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[14px] transition-colors ${errors.price ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
+        />
+        {errors.price && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.price}</p>}
       </div>
 
-      {/* Variants */}
-      <VariantsBuilder variants={form.variants} onChange={handleVariantsChange} error={errors.variants} />
-
-      {/* Actions */}
       <div className="flex items-center justify-end gap-2.5 pt-2">
+        {errors.submit && <p className="mr-auto text-[11px] text-[#fc3c44]">{errors.submit}</p>}
         <button type="button" onClick={onCancel} disabled={submitting} className="px-4 py-2 text-[13px] font-medium text-white/65 hover:text-white border border-white/15 hover:border-white/30 rounded-lg transition-colors disabled:opacity-50">
           Cancel
         </button>

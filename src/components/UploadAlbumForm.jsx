@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import TracklistBuilder from "./TracklistBuilder";
 import { validateAlbumForm } from "../utils/uploadValidationAlbum";
-import { validateCoverFile, formatBytes } from "../utils/uploadValidation";
+import { validateCoverFile } from "../utils/uploadValidation";
+import { apiUpload } from "../lib/api";
 
 export default function UploadAlbumForm({ onCancel, onSuccess }) {
   const [form, setForm] = useState({
@@ -46,30 +47,41 @@ export default function UploadAlbumForm({ onCancel, onSuccess }) {
     e?.preventDefault?.();
     const { isValid, errors: formErrors } = validateAlbumForm(form);
     if (!isValid) { setErrors(formErrors); return; }
+
+    if (form.tracks.some((track) => track.type === "existing")) {
+      setErrors((prev) => ({
+        ...prev,
+        tracklist: "Picking existing singles is not supported yet. Upload new tracks for now.",
+      }));
+      return;
+    }
+
     setSubmitting(true);
 
-    // TODO: replace with FormData + fetch('/api/products/album') when backend is ready
-    const payload = {
-      type: "album",
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: Number(form.price),
-      name_your_price: form.nameYourPrice,
-      cover: form.cover ? { name: form.cover.name, size: formatBytes(form.cover.size), type: form.cover.type } : null,
-      tracks: form.tracks.map((t, i) => ({
-        order: i + 1,
-        type: t.type,
-        ...(t.type === "existing"
-          ? { track_id: t.track_id, title: t.title }
-          : { title: t.title, file: t.file ? { name: t.file.name, size: formatBytes(t.file.size), type: t.file.type } : null }),
-      })),
-    };
+    try {
+      const fd = new FormData();
+      fd.append("cover", form.cover);
+      fd.append("title", form.title.trim());
+      fd.append("description", form.description.trim());
+      fd.append("price", form.price);
+      fd.append("nameYourPrice", String(form.nameYourPrice));
+      fd.append("trackTitles", JSON.stringify(form.tracks.map((track) => track.title.trim())));
 
-    console.log("Upload Album submitted:", payload);
-    await new Promise((r) => setTimeout(r, 800));
+      form.tracks.forEach((track) => {
+        fd.append("audio", track.file);
+      });
 
-    setSubmitting(false);
-    if (onSuccess) onSuccess(payload);
+      const result = await apiUpload("/products/album", fd);
+
+      if (onSuccess) onSuccess(result.data);
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: err.message || "Upload failed",
+      }));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -113,7 +125,7 @@ export default function UploadAlbumForm({ onCancel, onSuccess }) {
             {errors.title && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.title}</p>}
           </div>
           <div>
-            <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Description</label>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">Description *</label>
             <textarea
               value={form.description}
               onChange={(e) => updateField("description", e.target.value)}
@@ -122,6 +134,7 @@ export default function UploadAlbumForm({ onCancel, onSuccess }) {
               maxLength={500}
               className={`w-full px-3.5 py-2.5 rounded-lg bg-white/[0.05] border outline-none text-white text-[13px] resize-none transition-colors ${errors.description ? "border-[#fc3c44]" : "border-white/10 focus:border-white/30"}`}
             />
+            {errors.description && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.description}</p>}
           </div>
         </div>
       </div>
@@ -155,6 +168,7 @@ export default function UploadAlbumForm({ onCancel, onSuccess }) {
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2.5 pt-2">
+        {errors.submit && <p className="mr-auto text-[11px] text-[#fc3c44]">{errors.submit}</p>}
         <button type="button" onClick={onCancel} disabled={submitting} className="px-4 py-2 text-[13px] font-medium text-white/65 hover:text-white border border-white/15 hover:border-white/30 rounded-lg transition-colors disabled:opacity-50">
           Cancel
         </button>

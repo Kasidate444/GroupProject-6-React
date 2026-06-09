@@ -67,6 +67,7 @@ export const validateTitle = (title) => {
 
 export const validateDescription = (desc) => {
   const d = (desc || "").trim();
+  if (d.length === 0) return "Description is required";
   if (d.length > TEXT_LIMITS.DESC_MAX) {
     return `Description too long (max ${TEXT_LIMITS.DESC_MAX} chars)`;
   }

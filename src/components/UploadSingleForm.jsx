@@ -5,6 +5,7 @@ import {
   validateAudioFile,
   formatBytes,
 } from "../utils/uploadValidation";
+import { apiUpload } from "../lib/api";
 
 // =============================================================================
 // UPLOAD SINGLE FORM — เนื้อหาฟอร์ม Upload Single (ใส่ใน UploadModal)
@@ -96,41 +97,26 @@ export default function UploadSingleForm({ onCancel, onSuccess }) {
 
     setSubmitting(true);
 
-    // ── ตอนนี้: console.log payload (รอ backend) ──
-    // ── อนาคต: เปลี่ยนเป็น fetch ──
-    //
-    //   const fd = new FormData();
-    //   fd.append('cover', form.cover);
-    //   fd.append('audio', form.audio);
-    //   fd.append('title', form.title);
-    //   ...
-    //   await fetch('/api/products/single', { method: 'POST', body: fd });
+    try {
+      const fd = new FormData();
+      fd.append("cover", form.cover);
+      fd.append("audio", form.audio);
+      fd.append("title", form.title.trim());
+      fd.append("description", form.description.trim());
+      fd.append("price", form.price);
+      fd.append("nameYourPrice", String(form.nameYourPrice));
 
-    const payload = {
-      type: "single",
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: Number(form.price),
-      name_your_price: form.nameYourPrice,
-      cover: form.cover ? {
-        name: form.cover.name,
-        size: formatBytes(form.cover.size),
-        type: form.cover.type,
-      } : null,
-      audio: form.audio ? {
-        name: form.audio.name,
-        size: formatBytes(form.audio.size),
-        type: form.audio.type,
-      } : null,
-    };
+      const result = await apiUpload("/products/single", fd);
 
-    console.log("🚀 Upload Single submitted:", payload);
-
-    // จำลอง API delay 800ms
-    await new Promise((r) => setTimeout(r, 800));
-
-    setSubmitting(false);
-    if (onSuccess) onSuccess(payload);
+      if (onSuccess) onSuccess(result.data);
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: err.message || "Upload failed",
+      }));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── ป้องกัน memory leak: revoke object URL ตอน component unmount ──
@@ -244,7 +230,7 @@ export default function UploadSingleForm({ onCancel, onSuccess }) {
       {/* ── DESCRIPTION ── */}
       <div>
         <label className="block text-[11px] uppercase tracking-[0.1em] text-white/50 mb-2">
-          Description
+          Description *
         </label>
         <textarea
           value={form.description}
@@ -305,6 +291,9 @@ export default function UploadSingleForm({ onCancel, onSuccess }) {
            form.requestSubmit() — แต่เพื่อความเรียบง่ายตอน demo ใส่ที่นี่ก่อน
       */}
       <div className="flex items-center justify-end gap-2.5 pt-2">
+        {errors.submit && (
+          <p className="mr-auto text-[11px] text-[#fc3c44]">{errors.submit}</p>
+        )}
         <button
           type="button"
           onClick={onCancel}

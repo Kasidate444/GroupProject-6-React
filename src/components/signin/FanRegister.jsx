@@ -266,9 +266,9 @@ export default function FanRegister({ onGoLogIn, onGoArtist, onRegister }) {
             </button>
 
             <div className="ka-footer">
-              Already have an account? <button type="button" onClick={onGoLogIn}>Log in</button>
+              Already have an account? <button type="button" onClick={onGoLogIn}><span className="cursor-pointer hover:underline text-blue-500">Log in</span></button>
               <br />
-              Are you an artist? <button type="button" onClick={onGoArtist}>Create an artist account</button>
+              Are you an artist? <button type="button" onClick={onGoArtist}><span className="cursor-pointer hover:underline text-blue-500">Create an artist account</span></button>
             </div>
           </form>
         </div>

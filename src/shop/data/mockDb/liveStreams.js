@@ -53,6 +53,18 @@ export const liveStreams = [
     started_at: new Date(Date.now() - 1 * 60 * 60 * 1000 - 15 * 60 * 1000), // 1h 15m ago
     scheduled_duration_sec: 3 * 60 * 60,
   },
+  {
+    _id: "live_004",
+    artist_id: "artist_008",
+    title: "Stream ลับ JSD12",
+    description:
+      "เต้นจนกว่าเพื่อนๆในกลุ่มผมจะทำโปรเจ็คเสร็จ",
+    video_url:
+      "https://res.cloudinary.com/dahzhfxua/video/upload/v1780929596/Final_1_b3xa7x.mp4",
+    thumbnail_url: "/covers/coversong-32.jpg",
+    started_at: new Date(Date.now() - 1 * 60 * 60 * 1000 - 15 * 60 * 1000), // 1h 15m ago
+    scheduled_duration_sec: 3 * 60 * 60,
+  },
 ];
 
 /*
