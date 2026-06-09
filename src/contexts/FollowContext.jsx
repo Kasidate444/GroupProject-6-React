@@ -1,4 +1,6 @@
+﻿/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from "react";
+import { apiPatch } from "../lib/api";
 
 const FollowContext = createContext(null);
 
@@ -12,17 +14,38 @@ export function FollowProvider({ children }) {
     }
   });
 
-  const toggleFollow = (artistId) => {
+  const persist = (next) => {
+    localStorage.setItem("followedArtists", JSON.stringify([...next]));
+    return next;
+  };
+
+  const setFollowedArtists = (artistIds = []) => {
+    setIds(persist(new Set(artistIds.filter(Boolean))));
+  };
+
+  const setLocalFollow = (artistId, followed) => {
     setIds((prev) => {
       const next = new Set(prev);
-      if (next.has(artistId)) {
-        next.delete(artistId);
-      } else {
-        next.add(artistId);
-      }
-      localStorage.setItem("followedArtists", JSON.stringify([...next]));
-      return next;
+      if (followed) next.add(artistId);
+      else next.delete(artistId);
+      return persist(next);
     });
+  };
+
+  const toggleFollow = async (artistId) => {
+    if (!artistId) return;
+    const wasFollowing = ids.has(artistId);
+    setLocalFollow(artistId, !wasFollowing);
+
+    try {
+      const result = await apiPatch(`/artists/${artistId}/follow`);
+      if (typeof result.followed === "boolean") {
+        setLocalFollow(artistId, result.followed);
+      }
+    } catch (error) {
+      setLocalFollow(artistId, wasFollowing);
+      throw error;
+    }
   };
 
   const isFollowing = (artistId) => ids.has(artistId);
@@ -30,9 +53,7 @@ export function FollowProvider({ children }) {
   const followCount = ids.size;
 
   return (
-    <FollowContext.Provider
-      value={{ toggleFollow, isFollowing, followedArtistIds, followCount }}
-    >
+    <FollowContext.Provider value={{ toggleFollow, isFollowing, followedArtistIds, followCount, setFollowedArtists }}>
       {children}
     </FollowContext.Provider>
   );

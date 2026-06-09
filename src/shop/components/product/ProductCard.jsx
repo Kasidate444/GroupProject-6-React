@@ -1,5 +1,5 @@
 ﻿import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -58,6 +58,7 @@ function ProductHeartIcon({ size = 14, filled }) {
 }
 
 export default function ProductCard({ product, contextQueue }) {
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isProductPlaying, currentProduct, togglePlay, playProduct } = useAudioPlayer();
   const { toggleWishlist, isWishlisted } = useWishlist();
@@ -226,9 +227,17 @@ export default function ProductCard({ product, contextQueue }) {
         <p className="truncate text-[12px] text-white/45">
           by{" "}
           {artistSlug ? (
-            <Link to={`/artist/${artistSlug}`} onClick={(e) => e.stopPropagation()} className="transition-colors hover:text-white/75">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/artist/${artistSlug}`);
+              }}
+              className="transition-colors hover:text-white/75"
+            >
               {artistName}
-            </Link>
+            </button>
           ) : (
             artistName
           )}
