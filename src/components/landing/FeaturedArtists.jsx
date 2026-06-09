@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiGet } from "../../lib/api";
 
 const ARTIST_SKELETON_COUNT = 8;
+const MIN_MARQUEE_ARTISTS = 18;
 
 const getArtistImage = (artist) => (
   artist.avatar_url || artist.profile_picture_url || artist.banner_url || artist.banner_picture_url || null
@@ -15,6 +16,17 @@ const getArtistName = (artist) => (
 const getArtistSlug = (artist) => (
   artist.slug || artist.username || artist._id
 );
+
+const repeatArtistsForMarquee = (items) => {
+  if (items.length === 0) return [];
+  const repeated = [];
+
+  while (repeated.length < MIN_MARQUEE_ARTISTS) {
+    repeated.push(...items);
+  }
+
+  return repeated.slice(0, Math.max(MIN_MARQUEE_ARTISTS, items.length));
+};
 
 function ArtistAvatarFallback({ name }) {
   return (
@@ -110,6 +122,8 @@ export default function FeaturedArtists() {
 
   if (!loading && artists.length === 0) return null;
 
+  const marqueeArtists = repeatArtistsForMarquee(artists);
+
   return (
     <section className="my-12 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="mb-8 flex items-baseline gap-4 px-[5%] after:h-px after:flex-1 after:bg-linear-to-r after:from-white/15 after:to-transparent after:content-[''] md:px-[10%]">
@@ -126,8 +140,8 @@ export default function FeaturedArtists() {
           </>
         ) : (
           <>
-            <ArtistRow artists={artists} />
-            <ArtistRow artists={artists} hidden />
+            <ArtistRow artists={marqueeArtists} />
+            <ArtistRow artists={marqueeArtists} hidden />
           </>
         )}
       </div>
