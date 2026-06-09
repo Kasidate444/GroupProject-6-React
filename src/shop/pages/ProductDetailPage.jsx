@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Footer from "../../components/common/Footer";
 import { apiGet } from "../../lib/api";
@@ -115,7 +115,7 @@ export default function ProductDetailPage() {
     if (addToCartDisabled) return;
 
     addToCart(product, {
-      quantity: qty,
+      quantity: purchaseQty,
       unitPrice: finalPrice,
       variantId: selectedVariant?.variant_id || null,
     });
@@ -230,17 +230,19 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            <div>
-              <p className="text-[11px] uppercase tracking-widest text-white/35 mb-2">Quantity</p>
-              <div className="flex items-center w-fit rounded-lg overflow-hidden border border-white/15 bg-white/5">
-                <button onClick={() => setQty((value) => Math.max(1, value - 1))} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">-</button>
-                <span className="w-10 text-center text-white/88 font-semibold text-[14px]">{qty}</span>
-                <button onClick={() => setQty((value) => value + 1)} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">+</button>
+            {product.type === "merch" && (
+              <div>
+                <p className="text-[11px] uppercase tracking-widest text-white/35 mb-2">Quantity</p>
+                <div className="flex items-center w-fit rounded-lg overflow-hidden border border-white/15 bg-white/5">
+                  <button onClick={() => setQty((value) => Math.max(1, value - 1))} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">-</button>
+                  <span className="w-10 text-center text-white/88 font-semibold text-[14px]">{qty}</span>
+                  <button onClick={() => setQty((value) => value + 1)} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">+</button>
+                </div>
               </div>
-            </div>
+            )}
 
             <button onClick={handleAddToCart} disabled={addToCartDisabled} className={`flex items-center justify-center gap-3 px-8 py-3.5 rounded-full font-semibold text-[15px] transition-all active:scale-95 w-full md:w-fit ${added ? "bg-white/[0.07] border border-white/15 text-white/60 cursor-default" : isMerchSoldOut ? "bg-white/5 text-white/30 cursor-not-allowed" : addToCartDisabled ? "bg-white/5 text-white/25 cursor-not-allowed" : "bg-accent hover:bg-accent-hover text-white"}`}>
-              {added ? "Added to cart" : isMerchSoldOut ? "Sold Out" : `Add to cart - ${formatPrice(finalPrice * qty)}`}
+              {added ? "Added to cart" : isMerchSoldOut ? "Sold Out" : `Add to cart - ${formatPrice(finalPrice * purchaseQty)}`}
             </button>
 
             {product.type !== "merch" && <p className="text-white/25 text-[11px]">Includes unlimited streaming plus download in MP3, FLAC, and more.</p>}
