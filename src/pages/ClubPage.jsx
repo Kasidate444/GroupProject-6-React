@@ -2,49 +2,7 @@ import { Link } from "react-router-dom";
 import Footer from "../components/common/Footer";
 import Nav from "../components/common/Nav";
 import headclub from "../assets/landing-page/headclub.png";
-import club1 from "../assets/landing-page/clubdjjoe.png";
-import club2 from "../assets/landing-page/clubsn2.jpg";
-import club3 from "../assets/landing-page/clubg3.png";
-import club4 from "../assets/landing-page/clubptri.png";
-
-const clubs = [
-  {
-    id: 1,
-    img: club1,
-    tag: "Audtlist Club",
-    title: "DJ Joe Buddha Club",
-    desc: "A club built for people who live for underground sounds, dusty samples, distorted basslines, and music that exists far away from the mainstream. This is a space for crate diggers, vinyl collectors, beat lovers, and listeners who believe the best music is often the rawest and most imperfect.\n\nInside the club, members share hidden gems, experimental hip-hop, rare mixes, underground electronic sounds, and tracks filled with texture, attitude, and late-night energy. Every song here feels like discovering something secret music made not for charts, but for people who truly listen.",
-    tagline: "No trends. No algorithms. Just pure sound and real music culture.",
-    accent: "#fc3c44",
-  },
-  {
-    id: 2,
-    img: club2,
-    tag: "Audtlist Club",
-    title: "Snake Refill Club T-POP",
-    desc: "A colorful little club for people who fall in love with catchy melodies, dreamy synths, emotional pop lyrics, and the chaos of modern indie pop culture. Built for listeners who sing heartbreak songs in their bedrooms, replay the same song all night, and find comfort inside glittery sounds and dramatic feelings.\n\nMembers share indie pop, bedroom pop, hyperpop, soft-girl anthems, and addictive tracks that feel sweet, emotional, playful, and impossible not to dance to. Every playlist inside this club carries a mix of vulnerability, fun, and late-night energy that turns sadness into something beautiful.",
-    tagline: "For people with loud headphones, soft hearts, and too many favorite songs.",
-    accent: "#9d6dff",
-  },
-  {
-    id: 3,
-    img: club3,
-    tag: "Audtlist Club",
-    title: "Ghost Stories & Metal Music Club",
-    desc: "A late-night club for people who enjoy ghost stories, strange internet mysteries, unsettling ambience, and music that sounds beautiful in the dark. This space is made for listeners who feel strangely comforted by silence, static noise, eerie melodies, and the feeling of walking alone at midnight.\n\nInside the club, members share horror-inspired playlists, dark ambient music, haunted soundscapes, lo-fi for sleepless nights, and experimental tracks that blur the line between fear and comfort. Every sound here feels cinematic, emotional, and slightly cursed in the best possible way.",
-    tagline: "Turn the lights off, put your headphones on, and let the music haunt you for a while.",
-    accent: "#00d9ff",
-  },
-  {
-    id: 4,
-    img: club4,
-    tag: "Audtlist Club",
-    title: "Urban Luk Thung & Molam Club",
-    desc: "A club for city people who still carry the sound of home inside their headphones. Built for listeners who grew up with luk thung on the radio, molam at temple fairs, long bus rides back to their hometown, and songs that somehow understand real life better than anyone else.\n\nMembers share classic luk thung hits, modern indie molam, emotional ballads, isaan grooves, and warm nostalgic tracks filled with storytelling, heartbreak, celebration, and hometown spirit. From traditional khaen melodies to modern folk-inspired sounds, this club is where old memories and new generations meet through music.",
-    tagline: "No matter where you come from, if your heart still moves with the rhythm of luk thung and molam — you belong here.",
-    accent: "#ffd700",
-  },
-];
+import { clubs } from "../data/clubs";
 
 export default function ClubPage() {
   return (
@@ -124,12 +82,22 @@ export default function ClubPage() {
                   — {club.tagline}
                 </p>
 
-                <span
-                  className="mt-1 w-fit cursor-default rounded-full px-6 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold tracking-wide text-white cursor-pointer"
-                  style={{ background: "#fc3c44" }}
-                >
-                  Explore club →
-                </span>
+                {club.id === 1 ? (
+                  <Link
+                    to={`/club/${club.id}`}
+                    className="mt-1 w-fit rounded-full px-6 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold tracking-wide text-white no-underline transition-transform hover:scale-105"
+                    style={{ background: "#fc3c44" }}
+                  >
+                    Explore club →
+                  </Link>
+                ) : (
+                  <span
+                    className="mt-1 w-fit cursor-default rounded-full px-6 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold tracking-wide text-white"
+                    style={{ background: "#fc3c44" }}
+                  >
+                    Explore club →
+                  </span>
+                )}
               </div>
             </div>
           );

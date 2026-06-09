@@ -15,19 +15,70 @@ import track6 from "../assets/track6.mp3.mp3";
 import track7 from "../assets/track7.mp3.mp3";
 
 export const tracks = [
-  { img: trackCover,    name: "Crimson Dawn",          artist: "Old World Vultures", desc: "Indie rock single",    duration: "4:05", src: audioSrc },
-  { img: albumCover1,  name: "Midnight Echoes",        artist: "Old World Vultures", desc: "Late-night album cut", duration: "5:12", src: track2 },
-  { img: nowPlayingImg, name: "Shadow of the Vulture", artist: "Old World Vultures", desc: "Live radio preview",   duration: "4:45", src: track3 },
-  { img: albumCover2,  name: "Neon Drift",             artist: "Velvet Crows",       desc: "B-side exclusive",     duration: "3:58", src: track4 },
-  { img: albumCover3,  name: "Glass Cities",           artist: "Crystal Mall",       desc: "Album opener",         duration: "5:30", src: track5 },
-  { img: albumCover4,  name: "Static Hymn",            artist: "Static Era",         desc: "Live session cut",     duration: "4:22", src: track6 },
-  { img: albumCover5,  name: "Phantom Roads",          artist: "Bangkok Phantom",    desc: "Synthwave single",     duration: "3:47", src: track7 },
+  {
+    img: trackCover,
+    name: "Crimson Dawn",
+    artist: "Old World Vultures",
+    desc: "Indie rock single",
+    duration: "4:05",
+    src: audioSrc,
+  },
+  {
+    img: albumCover1,
+    name: "Midnight Echoes",
+    artist: "Old World Vultures",
+    desc: "Late-night album cut",
+    duration: "5:12",
+    src: track2,
+  },
+  {
+    img: nowPlayingImg,
+    name: "Shadow of the Vulture",
+    artist: "Old World Vultures",
+    desc: "Live radio preview",
+    duration: "4:45",
+    src: track3,
+  },
+  {
+    img: albumCover2,
+    name: "Neon Drift",
+    artist: "Velvet Crows",
+    desc: "B-side exclusive",
+    duration: "3:58",
+    src: track4,
+  },
+  {
+    img: albumCover3,
+    name: "Glass Cities",
+    artist: "Crystal Mall",
+    desc: "Album opener",
+    duration: "5:30",
+    src: track5,
+  },
+  {
+    img: albumCover4,
+    name: "Static Hymn",
+    artist: "Static Era",
+    desc: "Live session cut",
+    duration: "4:22",
+    src: track6,
+  },
+  {
+    img: albumCover5,
+    name: "Phantom Roads",
+    artist: "Bangkok Phantom",
+    desc: "Synthwave single",
+    duration: "3:47",
+    src: track7,
+  },
 ];
 
 const AudioContext = createContext(null);
 
 export function AudioProvider({ children }) {
   const audioRef = useRef(null);
+  const introRef = useRef(null);
+  const [introPlaying, setIntroPlaying] = useState(false);
   const shouldResumeRef = useRef(false);
 
   const [activeTrackIndex, setActiveTrackIndex] = useState(0);
@@ -56,7 +107,10 @@ export function AudioProvider({ children }) {
     setDuration(0);
     audio.load();
     if (shouldResumeRef.current) {
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
       shouldResumeRef.current = false;
     } else {
       setIsPlaying(false);
@@ -71,7 +125,10 @@ export function AudioProvider({ children }) {
       setIsPlaying(false);
     } else {
       setIsVisible(true);
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
     }
   };
 
@@ -87,7 +144,9 @@ export function AudioProvider({ children }) {
 
   const closeMiniPlayer = () => {
     const audio = audioRef.current;
-    if (audio) { audio.pause(); }
+    if (audio) {
+      audio.pause();
+    }
     setIsPlaying(false);
     setIsVisible(false);
   };
@@ -95,6 +154,46 @@ export function AudioProvider({ children }) {
   const handleEnded = () => {
     shouldResumeRef.current = true;
     setActiveTrackIndex((i) => (i + 1) % tracks.length);
+  };
+
+  const playIntro = (src, { volume: v = 0.7 } = {}) => {
+    try {
+      // stop previous intro if playing
+      if (introRef.current) {
+        try {
+          introRef.current.pause();
+        } catch (e) {}
+        introRef.current = null;
+      }
+      const a = new Audio(src);
+      a.volume = Math.max(0, Math.min(1, v));
+      a.addEventListener("ended", () => {
+        setIntroPlaying(false);
+      });
+      a.addEventListener("pause", () => {
+        setIntroPlaying(false);
+      });
+      a.play()
+        .then(() => {
+          setIntroPlaying(true);
+        })
+        .catch(() => {
+          setIntroPlaying(false);
+        });
+      introRef.current = a;
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const stopIntro = () => {
+    if (introRef.current) {
+      try {
+        introRef.current.pause();
+      } catch (e) {}
+      introRef.current = null;
+      setIntroPlaying(false);
+    }
   };
 
   const selectTrack = (index) => {
@@ -106,7 +205,8 @@ export function AudioProvider({ children }) {
     const audio = audioRef.current;
     if (!audio?.duration) return;
     const { left, width } = event.currentTarget.getBoundingClientRect();
-    audio.currentTime = Math.min(Math.max((event.clientX - left) / width, 0), 1) * audio.duration;
+    audio.currentTime =
+      Math.min(Math.max((event.clientX - left) / width, 0), 1) * audio.duration;
   };
 
   const updateProgress = () => {
@@ -124,13 +224,31 @@ export function AudioProvider({ children }) {
   };
 
   return (
-    <AudioContext.Provider value={{
-      tracks, activeTrack, activeTrackIndex,
-      isPlaying, progress, currentTime, duration,
-      volume, isMuted, isVisible,
-      togglePlayback, playNext, playPrevious, selectTrack, seekAudio,
-      setVolume, setIsMuted, closeMiniPlayer,
-    }}>
+    <AudioContext.Provider
+      value={{
+        tracks,
+        activeTrack,
+        activeTrackIndex,
+        isPlaying,
+        progress,
+        currentTime,
+        duration,
+        volume,
+        isMuted,
+        isVisible,
+        togglePlayback,
+        playNext,
+        playPrevious,
+        selectTrack,
+        seekAudio,
+        setVolume,
+        setIsMuted,
+        closeMiniPlayer,
+        playIntro,
+        stopIntro,
+        introPlaying,
+      }}
+    >
       {children}
       <audio
         ref={audioRef}

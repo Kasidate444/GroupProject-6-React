@@ -6,8 +6,17 @@ import { useCart } from "../context/CartContext";
 import { useAudioPlayer } from "../context/AudioPlayerContext";
 import PlayButton from "../components/audio/PlayButton";
 import ProductCard from "../components/product/ProductCard";
-import { formatPrice, formatDuration, formatDate } from "../data/helpers";
-import { getArtistName, getArtistSlug, getProductGenres, getProductTracks } from "../utils/productShape";
+import {
+  findProductBySlug,
+  getProductWithDetails,
+  findProductById,
+  formatPrice,
+  formatDuration,
+  formatDate,
+  getArtistGenres,
+  getProductsByArtist,
+} from "../data/helpers";
+import { getMerchWithLiveStock } from "../data/stockService.js";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
