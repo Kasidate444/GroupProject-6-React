@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFulfillment } from "../../contexts/FulfillmentContext";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { apiGet, apiUpload } from "../../lib/api";
 import { artists, orders, products, users } from "../data/mockDb";
 import { getProductsByArtist } from "../data/helpers";
 import UploadModal from "../../components/UploadModal";
@@ -9,27 +10,83 @@ import UploadSingleForm from "../../components/UploadSingleForm";
 import UploadAlbumForm from "../../components/UploadAlbumForm";
 import UploadMerchForm from "../../components/UploadMerchForm";
 
+const buildArtistProfile = (profile, fallbackArtist, fallbackUser) => ({
+  ...fallbackArtist,
+  ...profile,
+  _id: profile?._id || fallbackArtist?._id,
+  name: profile?.display_name || profile?.username || fallbackArtist?.name || fallbackUser?.email || "Artist",
+  banner_url: profile?.banner_picture?.url || fallbackArtist?.banner_url || "",
+  avatar_url: profile?.profile_picture?.url || "",
+  location: profile?.location || fallbackArtist?.location || "",
+  bio: profile?.bio || fallbackArtist?.bio || "",
+});
+
 export default function ProfilePageArtist() {
   const { user, isLoggedIn } = useAuth();
-  const currentArtist =
-    artists.find((artist) => artist.user_id === user?._id) || artists[0];
+  const mockArtist = artists.find((artist) => artist.user_id === user?._id) || artists[0];
+  const [artistProfile, setArtistProfile] = useState(null);
+  const currentArtist = artistProfile || buildArtistProfile(null, mockArtist, user);
   const artistProducts = getProductsByArtist(currentArtist?._id);
   const [activeTab, setActiveTab] = useState("overview");
   const [isSingleOpen, setIsSingleOpen] = useState(false);
   const [isAlbumOpen, setIsAlbumOpen] = useState(false);
   const [isMerchOpen, setIsMerchOpen] = useState(false);
   const [showUploadMenu, setShowUploadMenu] = useState(false);
-  const [bannerUrl, setBannerUrl] = useState(
-    () => localStorage.getItem("artistBannerUrl") || currentArtist?.banner_url || "",
-  );
-  const [avatarUrl, setAvatarUrl] = useState(
-    () => localStorage.getItem("artistAvatarUrl") || "",
-  );
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileStatus, setProfileStatus] = useState(null);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileForm, setProfileForm] = useState({
+    display_name: "",
+    location: "",
+    bio: "",
+    profile_picture: null,
+    banner_picture: null,
+  });
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const bannerInputRef = useRef(null);
   const avatarInputRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadArtistProfile = async () => {
+      try {
+        const profile = await apiGet("/profile");
+        if (cancelled) return;
+
+        const nextArtist = buildArtistProfile(profile, mockArtist, user);
+        setArtistProfile(nextArtist);
+        setBannerUrl(nextArtist.banner_url);
+        setAvatarUrl(nextArtist.avatar_url);
+        setProfileForm({
+          display_name: nextArtist.name || "",
+          location: nextArtist.location || "",
+          bio: nextArtist.bio || "",
+          profile_picture: null,
+          banner_picture: null,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setProfileStatus("error");
+          setProfileMessage(error.message || "Unable to load artist profile.");
+        }
+      }
+    };
+
+    if (isLoggedIn && user?.role === "artist") {
+      loadArtistProfile();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, mockArtist, user]);
+
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (user?.role !== "artist") return <Navigate to="/profile" replace />;
 
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -48,128 +105,268 @@ export default function ProfilePageArtist() {
       const url = ev.target.result;
       if (type === "banner") {
         setBannerUrl(url);
-        localStorage.setItem("artistBannerUrl", url);
+        setProfileForm((prev) => ({ ...prev, banner_picture: file }));
       } else {
         setAvatarUrl(url);
-        localStorage.setItem("artistAvatarUrl", url);
+        setProfileForm((prev) => ({ ...prev, profile_picture: file }));
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const filteredProducts = artistProducts.filter((p) => {
-    if (activeTab === "album") return p.type === "album";
-    if (activeTab === "single") return p.type === "single";
-    if (activeTab === "merch") return p.type === "merch";
+  const updateProfileField = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+    setProfileStatus(null);
+    setProfileMessage("");
+  };
+
+  const startProfileEdit = () => {
+    setProfileForm({
+      display_name: currentArtist?.name || "",
+      location: currentArtist?.location || "",
+      bio: currentArtist?.bio || "",
+      profile_picture: null,
+      banner_picture: null,
+    });
+    setIsEditingProfile(true);
+    setProfileStatus(null);
+    setProfileMessage("");
+  };
+
+  const cancelProfileEdit = () => {
+    setIsEditingProfile(false);
+    setProfileForm({
+      display_name: currentArtist?.name || "",
+      location: currentArtist?.location || "",
+      bio: currentArtist?.bio || "",
+      profile_picture: null,
+      banner_picture: null,
+    });
+    setBannerUrl(currentArtist?.banner_url || "");
+    setAvatarUrl(currentArtist?.avatar_url || "");
+    setProfileStatus(null);
+    setProfileMessage("");
+  };
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    if (profileSaving) return;
+
+    setProfileSaving(true);
+    setProfileStatus(null);
+    setProfileMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("display_name", profileForm.display_name.trim());
+      formData.append("location", profileForm.location.trim());
+      formData.append("bio", profileForm.bio.trim());
+      if (profileForm.profile_picture) formData.append("profile_picture", profileForm.profile_picture);
+      if (profileForm.banner_picture) formData.append("banner_picture", profileForm.banner_picture);
+
+      const response = await apiUpload("/profile", formData, "PUT");
+      const updated = response.data || response;
+      const nextArtist = buildArtistProfile(updated, currentArtist, user);
+
+      setArtistProfile(nextArtist);
+      setBannerUrl(nextArtist.banner_url);
+      setAvatarUrl(nextArtist.avatar_url);
+      setProfileForm({
+        display_name: nextArtist.name || "",
+        location: nextArtist.location || "",
+        bio: nextArtist.bio || "",
+        profile_picture: null,
+        banner_picture: null,
+      });
+      setIsEditingProfile(false);
+      setProfileStatus("success");
+      setProfileMessage("Artist profile updated.");
+    } catch (error) {
+      setProfileStatus("error");
+      setProfileMessage(error.message || "Unable to update artist profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const filteredProducts = artistProducts.filter((product) => {
+    if (activeTab === "album") return product.type === "album";
+    if (activeTab === "single") return product.type === "single";
+    if (activeTab === "merch") return product.type === "merch";
     return true;
   });
 
   return (
     <div className="min-h-screen bg-bg font-['Plus_Jakarta_Sans',sans-serif]">
-
-      {/* ── Banner ── */}
       <div
-        className="relative h-80 bg-cover bg-center cursor-pointer group overflow-hidden"
+        className={`relative h-80 bg-cover bg-center group overflow-hidden ${isEditingProfile ? "cursor-pointer" : ""}`}
         style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : { background: "#141414" }}
-        onClick={() => bannerInputRef.current?.click()}
+        onClick={() => {
+          if (isEditingProfile) bannerInputRef.current?.click();
+        }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="bg-black/50 backdrop-blur-sm text-white/80 text-[12px] px-3 py-1.5 rounded-full border border-white/15 flex items-center gap-1.5">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Change banner
-          </span>
-        </div>
+        {isEditingProfile && (
+          <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="bg-black/50 backdrop-blur-sm text-white/80 text-[12px] px-3 py-1.5 rounded-full border border-white/15 flex items-center gap-1.5">
+              Change banner
+            </span>
+          </div>
+        )}
         <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, "banner")} />
       </div>
 
-      {/* ── Profile header ── */}
       <div className="px-[5%] -mt-20 relative z-10 md:px-[10%]">
         <div className="flex flex-col gap-4 items-start md:flex-row md:items-end md:gap-6">
-
-          {/* Avatar */}
           <div
-            className="relative w-36 h-36 shrink-0 rounded-full overflow-hidden bg-bg-card ring-4 ring-bg shadow-2xl cursor-pointer group"
-            onClick={() => avatarInputRef.current?.click()}
+            className={`relative w-36 h-36 shrink-0 rounded-full overflow-hidden bg-bg-card ring-4 ring-bg shadow-2xl group ${isEditingProfile ? "cursor-pointer" : ""}`}
+            onClick={() => {
+              if (isEditingProfile) avatarInputRef.current?.click();
+            }}
           >
-            <img
-              src={avatarUrl || currentArtist?.banner_url}
-              alt={currentArtist?.name}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            </div>
+            {avatarUrl || currentArtist?.banner_url ? (
+              <img
+                src={avatarUrl || currentArtist?.banner_url}
+                alt={currentArtist?.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-white/[0.07] text-white/45 text-[2.5rem] font-bold">
+                {(currentArtist?.name || "A")[0].toUpperCase()}
+              </div>
+            )}
+            {isEditingProfile && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <span className="text-white/80 text-[12px] font-semibold">Change</span>
+              </div>
+            )}
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, "avatar")} />
           </div>
 
-          {/* Info */}
           <div className="flex-1 pb-2 min-w-0">
             <span className="inline-flex items-center gap-1.5 bg-accent/10 border border-accent/20 text-accent text-[11px] font-semibold px-2.5 py-1 rounded-full mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
               Artist
             </span>
-            <h1 className="text-white text-[2.2rem] font-bold tracking-tight leading-none truncate">
-              {currentArtist?.name || user?.display_name || user?.email}
-            </h1>
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              {currentArtist?.location && (
-                <span className="text-white/40 text-[13px] flex items-center gap-1">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {currentArtist.location}
-                </span>
-              )}
-              <span className="text-white/15">·</span>
-              <span className="text-white/40 text-[13px]">{currentArtist?.bio?.slice(0, 60)}{(currentArtist?.bio?.length ?? 0) > 60 ? "…" : ""}</span>
-            </div>
-          </div>
-
-          {/* Upload button */}
-          <div className="relative pb-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowUploadMenu((v) => !v)}
-              className="rounded-full bg-accent hover:bg-accent-hover transition-all duration-200 inline-flex items-center overflow-hidden shadow-lg hover:shadow-accent/30"
-            >
-              <span className="flex items-center gap-2.5 pl-6 pr-4 py-3.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                <span className="text-[14px] font-bold text-white tracking-wide">Upload new</span>
-              </span>
-              <span className="w-px h-6 bg-white/20 self-center" />
-              <span className="px-4 py-3.5 flex items-center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </span>
-            </button>
-            {showUploadMenu && (
+            {isEditingProfile ? (
+              <form id="artist-profile-form" onSubmit={handleProfileSubmit} className="max-w-2xl space-y-3">
+                <input
+                  type="text"
+                  value={profileForm.display_name}
+                  onChange={(e) => updateProfileField("display_name", e.target.value)}
+                  placeholder="Artist name"
+                  maxLength={80}
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[15px] font-semibold text-white outline-none focus:border-white/30"
+                />
+                <input
+                  type="text"
+                  value={profileForm.location}
+                  onChange={(e) => updateProfileField("location", e.target.value)}
+                  placeholder="Location"
+                  maxLength={120}
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[14px] text-white/85 outline-none focus:border-white/30"
+                />
+                <textarea
+                  value={profileForm.bio}
+                  onChange={(e) => updateProfileField("bio", e.target.value)}
+                  placeholder="Bio"
+                  maxLength={250}
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[14px] text-white/85 outline-none focus:border-white/30"
+                />
+              </form>
+            ) : (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowUploadMenu(false)} />
-                <div className="absolute right-0 top-full mt-2 z-20 w-44 bg-bg-card border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-                  {[
-                    { label: "Single", icon: "♪", action: () => { setShowUploadMenu(false); setIsSingleOpen(true); } },
-                    { label: "Album", icon: "◐", action: () => { setShowUploadMenu(false); setIsAlbumOpen(true); } },
-                    { label: "Merch", icon: "✦", action: () => { setShowUploadMenu(false); setIsMerchOpen(true); } },
-                  ].map((item, i) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={item.action}
-                      className={`w-full text-left px-4 py-3 text-[13px] text-white/75 hover:bg-white/[0.06] hover:text-white transition-colors flex items-center gap-2.5 ${i > 0 ? "border-t border-white/[0.06]" : ""}`}
-                    >
-                      <span>{item.icon}</span> {item.label}
-                    </button>
-                  ))}
+                <h1 className="text-white text-[2.2rem] font-bold tracking-tight leading-none truncate">
+                  {currentArtist?.name || user?.display_name || user?.email}
+                </h1>
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {currentArtist?.location && <span className="text-white/40 text-[13px]">{currentArtist.location}</span>}
+                  {currentArtist?.bio && <span className="text-white/40 text-[13px]">{currentArtist.bio.slice(0, 90)}{currentArtist.bio.length > 90 ? "..." : ""}</span>}
                 </div>
               </>
             )}
+            {profileStatus && (
+              <p className={`mt-3 text-[12px] ${profileStatus === "success" ? "text-green-400" : "text-[#fc3c44]"}`}>
+                {profileMessage}
+              </p>
+            )}
+          </div>
+
+          <div className="relative pb-2 shrink-0 flex items-center gap-2">
+            {isEditingProfile ? (
+              <>
+                <button
+                  type="submit"
+                  form="artist-profile-form"
+                  disabled={profileSaving}
+                  className="rounded-full bg-accent px-5 py-3 text-[13px] font-bold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                >
+                  {profileSaving ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelProfileEdit}
+                  disabled={profileSaving}
+                  className="rounded-full border border-white/15 px-5 py-3 text-[13px] font-semibold text-white/60 transition-colors hover:border-white/30 hover:text-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={startProfileEdit}
+                className="rounded-full border border-white/10 bg-white/[0.08] px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.12]"
+              >
+                Edit profile
+              </button>
+            )}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowUploadMenu((value) => !value)}
+                className="rounded-full bg-accent hover:bg-accent-hover transition-all duration-200 inline-flex items-center overflow-hidden shadow-lg hover:shadow-accent/30"
+              >
+                <span className="flex items-center gap-2.5 pl-6 pr-4 py-3.5">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <span className="text-[14px] font-bold text-white tracking-wide">Upload new</span>
+                </span>
+                <span className="w-px h-6 bg-white/20 self-center" />
+                <span className="px-4 py-3.5 flex items-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </span>
+              </button>
+              {showUploadMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowUploadMenu(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-20 w-44 bg-bg-card border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                    {[
+                      { label: "Single", icon: "\u266A", action: () => { setShowUploadMenu(false); setIsSingleOpen(true); } },
+                      { label: "Album", icon: "\u25D0", action: () => { setShowUploadMenu(false); setIsAlbumOpen(true); } },
+                      { label: "Merch", icon: "\u2726", action: () => { setShowUploadMenu(false); setIsMerchOpen(true); } },
+                    ].map((item, index) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={item.action}
+                        className={`w-full text-left px-4 py-3 text-[13px] text-white/75 hover:bg-white/[0.06] hover:text-white transition-colors flex items-center gap-2.5 ${index > 0 ? "border-t border-white/[0.06]" : ""}`}
+                      >
+                        <span>{item.icon}</span> {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
       <div className="mt-8 px-[5%] md:px-[10%]">
         <div className="flex items-center gap-0.5 border-b border-white/10">
           {tabs.map((tab) => (
@@ -204,19 +401,18 @@ export default function ProfilePageArtist() {
         </div>
       </div>
 
-      <UploadModal isOpen={isSingleOpen} onClose={() => setIsSingleOpen(false)} title="Upload Single" icon="♪">
+      <UploadModal isOpen={isSingleOpen} onClose={() => setIsSingleOpen(false)} title="Upload Single" icon={"\u266A"}>
         <UploadSingleForm onCancel={() => setIsSingleOpen(false)} onSuccess={() => setIsSingleOpen(false)} />
       </UploadModal>
-      <UploadModal isOpen={isAlbumOpen} onClose={() => setIsAlbumOpen(false)} title="Upload Album" icon="◐" width={640}>
+      <UploadModal isOpen={isAlbumOpen} onClose={() => setIsAlbumOpen(false)} title="Upload Album" icon={"\u25D0"} width={640}>
         <UploadAlbumForm onCancel={() => setIsAlbumOpen(false)} onSuccess={() => setIsAlbumOpen(false)} />
       </UploadModal>
-      <UploadModal isOpen={isMerchOpen} onClose={() => setIsMerchOpen(false)} title="Upload Merch" icon="✦" width={680}>
+      <UploadModal isOpen={isMerchOpen} onClose={() => setIsMerchOpen(false)} title="Upload Merch" icon={"\u2726"} width={680}>
         <UploadMerchForm onCancel={() => setIsMerchOpen(false)} onSuccess={() => setIsMerchOpen(false)} />
       </UploadModal>
     </div>
   );
 }
-
 function ProductGrid({ products }) {
   if (products.length === 0) {
     return (
@@ -299,7 +495,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
     setTimeout(() => setWithdrawSuccess(false), 3500);
   };
 
-  // Chart — date-bucketed over selected range
+  // Chart 鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻdate-bucketed over selected range
   const chartLength = 26;
   const rangeMs = now - cutoff || 1;
   const windowMs = rangeMs / chartLength;
@@ -350,10 +546,10 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
   return (
     <section className="text-white space-y-3">
 
-      {/* ── Dashboard header card ── */}
+      {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Dashboard header card 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="rounded-2xl border border-white/10 bg-bg-card px-6 py-5 flex items-center justify-between gap-6">
         <div>
-          <p className="text-[12px] text-white/35">{timeGreeting} · {dateStr}</p>
+          <p className="text-[12px] text-white/35">{timeGreeting} 郢晢ｽｻ郢ｧ謇假ｽｽ・ｽ繝ｻ・ｷ {dateStr}</p>
           <h2 className="text-[22px] font-bold text-white mt-0.5">{artist?.name}</h2>
         </div>
         <div className="flex items-center gap-6 shrink-0">
@@ -368,12 +564,12 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
           </select>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest text-white/35">Total Earnings</p>
-            <p className="text-[22px] font-bold text-white tabular-nums mt-0.5">฿{netRevenue.toLocaleString()}</p>
+            <p className="text-[22px] font-bold text-white tabular-nums mt-0.5">THB {netRevenue.toLocaleString()}</p>
           </div>
           <div className="w-px h-10 bg-white/10" />
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest text-white/35">Available</p>
-            <p className="text-[22px] font-bold text-[#4ade80] tabular-nums mt-0.5">฿{payoutBalance.toLocaleString()}</p>
+            <p className="text-[22px] font-bold text-[#4ade80] tabular-nums mt-0.5">THB {payoutBalance.toLocaleString()}</p>
           </div>
           <button
             type="button"
@@ -386,10 +582,10 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
+      {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Stat cards 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: `Last ${timeRange} ${timeRange === "1" ? "day" : "days"}`, value: `฿${netRevenue.toLocaleString()}`, sub: "after 10% fee" },
+          { label: `Last ${timeRange} ${timeRange === "1" ? "day" : "days"}`, value: `THB ${netRevenue.toLocaleString()}`, sub: "after 10% fee" },
           { label: "Orders", value: String(ordersCount), sub: "total orders", onClick: onShowOrders },
           { label: "Fans", value: String(fanCount), sub: "unique buyers", onClick: onShowFans },
           { label: "Platform fee", value: "10%", sub: "per transaction" },
@@ -406,7 +602,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
         ))}
       </div>
 
-      {/* ── Charts ── */}
+      {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Charts 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="grid grid-cols-[1.6fr_1fr] gap-3">
 
         {/* Revenue chart */}
@@ -473,7 +669,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
         </div>
       </div>
 
-      {/* ── Bottom 2-col: Recent sales + Top fans ── */}
+      {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Bottom 2-col: Recent sales + Top fans 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="grid grid-cols-2 gap-3">
 
         {/* Recent sales */}
@@ -484,14 +680,14 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
               <h3 className="text-[15px] font-semibold text-white mt-0.5">Recent sales</h3>
             </div>
             <button type="button" onClick={onShowOrders} className="text-[11px] text-white/30 hover:text-white/60 transition-colors">
-              See all →
+              See all
             </button>
           </div>
           <div className="space-y-1">
             {artistOrders.slice(0, 5).map((order) => {
               const myItems = order.items.filter((i) => i.artist_id === artistId);
               const amount = myItems.reduce((s, i) => s + i.unit_price * (i.quantity || 1), 0);
-              const firstTitle = myItems[0]?.title_snapshot ?? "—";
+              const firstTitle = myItems[0]?.title_snapshot ?? "Untitled";
               const extra = myItems.length > 1 ? ` +${myItems.length - 1}` : "";
               const buyer = users.find((u) => u._id === order.user_id);
               const buyerName = buyer?.display_name || buyer?.username || "Unknown";
@@ -506,7 +702,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
                       <p className="text-[10px] text-white/30">{buyerName}</p>
                     </div>
                   </div>
-                  <p className="text-[13px] font-semibold text-white tabular-nums shrink-0 ml-3">฿{amount.toLocaleString()}</p>
+                  <p className="text-[13px] font-semibold text-white tabular-nums shrink-0 ml-3">THB {amount.toLocaleString()}</p>
                 </div>
               );
             })}
@@ -521,7 +717,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
               <h3 className="text-[15px] font-semibold text-white mt-0.5">Top fans</h3>
             </div>
             <button type="button" onClick={onShowFans} className="text-[11px] text-white/30 hover:text-white/60 transition-colors">
-              See all {fanCount} →
+              See all {fanCount}
             </button>
           </div>
           {fanEntries.length === 0 ? (
@@ -538,7 +734,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
                   <p className="text-[12px] font-medium text-white/80 truncate">{user.display_name || user.username}</p>
                   <p className="text-[10px] text-white/30">{lastPurchase?.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>
                 </div>
-                <p className="text-[12px] font-semibold text-white tabular-nums shrink-0">{purchases}×</p>
+                <p className="text-[12px] font-semibold text-white tabular-nums shrink-0">{purchases}</p>
               </div>
             ))}
           </div>
@@ -550,7 +746,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
       {withdrawSuccess && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-bg-card border border-white/10 px-5 py-3 shadow-2xl flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-accent shrink-0" />
-          <span className="text-[13px] text-white/80">Withdrawal requested — arrives in 3–5 business days.</span>
+          <span className="text-[13px] text-white/80">Withdrawal requested 鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻarrives in 3鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻ business days.</span>
         </div>
       )}
 
@@ -583,7 +779,7 @@ function FansList({ artistId }) {
   });
 
   if (fanEntries.length === 0) {
-    return <div className="py-12 text-white/35 text-[14px]">No fans yet — no purchases found.</div>;
+    return <div className="py-12 text-white/35 text-[14px]">No fans yet 鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻno purchases found.</div>;
   }
 
   return (
@@ -683,7 +879,7 @@ function OrdersList({ artistId }) {
                 <div>
                   <p className="text-[13px] font-semibold text-white">{buyerName}</p>
                   <p className="text-[11px] text-white/30">
-                    {order._id} · {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    {order._id} 郢晢ｽｻ郢ｧ謇假ｽｽ・ｽ繝ｻ・ｷ {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
               </div>
@@ -692,8 +888,8 @@ function OrdersList({ artistId }) {
                   {statusCfg.label}
                 </span>
                 <div className="text-right">
-                  <p className="text-[14px] font-bold text-white tabular-nums">฿{net.toLocaleString()}</p>
-                  <p className="text-[10px] text-white/25 tabular-nums">฿{gross.toLocaleString()} gross</p>
+                  <p className="text-[14px] font-bold text-white tabular-nums">THB {net.toLocaleString()}</p>
+                  <p className="text-[10px] text-white/25 tabular-nums">THB {gross.toLocaleString()} gross</p>
                 </div>
               </div>
             </div>
@@ -715,7 +911,7 @@ function OrdersList({ artistId }) {
                       <div className="min-w-0">
                         <p className="text-[13px] text-white/80 font-medium truncate">{item.title_snapshot}</p>
                         <p className="text-[11px] text-white/30 capitalize mt-0.5">
-                          {p?.type ?? "—"}{item.variant_id ? " · size M" : ""}
+                          {p?.type ?? "unknown"}{item.variant_id ? " / variant" : ""}
                         </p>
                       </div>
                     </div>
@@ -742,7 +938,7 @@ function OrdersList({ artistId }) {
                         </span>
                       )}
                       <p className="text-[13px] font-semibold text-white tabular-nums w-16 text-right">
-                        ฿{(item.unit_price * (item.quantity || 1)).toLocaleString()}
+                        THB {(item.unit_price * (item.quantity || 1)).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -761,7 +957,7 @@ function WithdrawModal({ balance, method, onConfirm, onCancel }) {
   const accountInfo =
     method?.type === "paypal"
       ? method.account_info?.email
-      : method?.account_info?.account_number ?? "—";
+      : method?.account_info?.account_number ?? "-";
 
   return (
     <div
@@ -773,16 +969,16 @@ function WithdrawModal({ balance, method, onConfirm, onCancel }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-[18px] font-bold text-white mb-1">Withdraw Funds</h2>
-        <p className="text-white/40 text-[13px] mb-5">Funds will be transferred within 3–5 business days.</p>
+        <p className="text-white/40 text-[13px] mb-5">Funds will be transferred within 3鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻ business days.</p>
 
         <div className="rounded-xl bg-bg border border-white/[0.08] p-4 mb-3">
           <p className="text-[11px] uppercase tracking-widest text-white/30 mb-1">Available balance</p>
-          <p className="text-[28px] font-bold text-[#4ade80]">฿{balance.toLocaleString()}</p>
+          <p className="text-[28px] font-bold text-[#4ade80]">THB {balance.toLocaleString()}</p>
         </div>
 
         <div className="rounded-xl bg-bg border border-white/[0.08] p-4 mb-6">
           <p className="text-[11px] uppercase tracking-widest text-white/30 mb-1">Transfer to</p>
-          <p className="text-[14px] font-semibold text-white capitalize">{method?.type ?? "—"}</p>
+          <p className="text-[14px] font-semibold text-white capitalize">{method?.type ?? "-"}</p>
           <p className="text-[13px] text-white/40 mt-0.5">{accountInfo}</p>
         </div>
 
