@@ -17,8 +17,8 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("collection");
   const [bannerUrl, setBannerUrl] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [savedProfile, setSavedProfile] = useState({ display_name: "", profile_picture_url: "", banner_picture_url: "" });
-  const [profileForm, setProfileForm] = useState({ display_name: "", profile_picture: null, banner_picture: null });
+  const [savedProfile, setSavedProfile] = useState({ display_name: "", profile_picture_url: "", banner_picture_url: "", location: "", bio: "" });
+  const [profileForm, setProfileForm] = useState({ display_name: "", location: "", bio: "", profile_picture: null, banner_picture: null });
   const [profileStatus, setProfileStatus] = useState(null);
   const [profileMessage, setProfileMessage] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -39,6 +39,8 @@ export default function ProfilePage() {
           display_name: profile.display_name || profile.username || "",
           profile_picture_url: profile.profile_picture?.url || "",
           banner_picture_url: profile.banner_picture?.url || "",
+          location: profile.location || "",
+          bio: profile.bio || "",
         };
 
         const nextCollectionProducts = (profile.user_collection || profile.collection || [])
@@ -50,7 +52,7 @@ export default function ProfilePage() {
         const nextFollowingArtists = (profile.followingArtist || []).map(normalizeProfileArtist).filter(Boolean);
 
         setSavedProfile(nextProfile);
-        setProfileForm({ display_name: nextProfile.display_name, profile_picture: null, banner_picture: null });
+        setProfileForm({ display_name: nextProfile.display_name, location: nextProfile.location, bio: nextProfile.bio, profile_picture: null, banner_picture: null });
         setAvatarUrl(nextProfile.profile_picture_url);
         setBannerUrl(nextProfile.banner_picture_url);
         setCollectionProducts(nextCollectionProducts);
@@ -82,7 +84,7 @@ export default function ProfilePage() {
   };
 
   const startProfileEdit = () => {
-    setProfileForm({ display_name: savedProfile.display_name, profile_picture: null, banner_picture: null });
+    setProfileForm({ display_name: savedProfile.display_name, location: savedProfile.location, bio: savedProfile.bio, profile_picture: null, banner_picture: null });
     setIsEditingProfile(true);
     setProfileStatus(null);
     setProfileMessage("");
@@ -90,7 +92,7 @@ export default function ProfilePage() {
 
   const cancelProfileEdit = () => {
     setIsEditingProfile(false);
-    setProfileForm({ display_name: savedProfile.display_name, profile_picture: null, banner_picture: null });
+    setProfileForm({ display_name: savedProfile.display_name, location: savedProfile.location, bio: savedProfile.bio, profile_picture: null, banner_picture: null });
     setAvatarUrl(savedProfile.profile_picture_url);
     setBannerUrl(savedProfile.banner_picture_url);
     setProfileStatus(null);
@@ -127,6 +129,10 @@ export default function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append("display_name", profileForm.display_name.trim());
+      if (user?.role === "artist") {
+        formData.append("location", profileForm.location.trim());
+        formData.append("bio", profileForm.bio.trim());
+      }
       if (profileForm.profile_picture) formData.append("profile_picture", profileForm.profile_picture);
       if (profileForm.banner_picture) formData.append("banner_picture", profileForm.banner_picture);
 
@@ -136,10 +142,12 @@ export default function ProfilePage() {
         display_name: updatedProfile.display_name || updatedProfile.username || "",
         profile_picture_url: updatedProfile.profile_picture?.url || avatarUrl,
         banner_picture_url: updatedProfile.banner_picture?.url || bannerUrl,
+        location: updatedProfile.location || profileForm.location.trim(),
+        bio: updatedProfile.bio || profileForm.bio.trim(),
       };
 
       setSavedProfile(nextProfile);
-      setProfileForm({ display_name: nextProfile.display_name, profile_picture: null, banner_picture: null });
+      setProfileForm({ display_name: nextProfile.display_name, location: nextProfile.location, bio: nextProfile.bio, profile_picture: null, banner_picture: null });
       setAvatarUrl(nextProfile.profile_picture_url);
       setBannerUrl(nextProfile.banner_picture_url);
       setIsEditingProfile(false);
@@ -196,16 +204,41 @@ export default function ProfilePage() {
           <div className="flex-1 pt-2 w-full">
             <form id="profile-edit-form" onSubmit={handleProfileSubmit} className="max-w-2xl">
               {isEditingProfile ? (
-                <div>
-                  <label className="block text-[11px] uppercase tracking-[0.1em] text-white/45 mb-1.5">Display name</label>
-                  <input type="text" value={profileForm.display_name} onChange={(e) => updateProfileField("display_name", e.target.value)} maxLength={80} autoFocus className="w-full max-w-xl px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.1em] text-white/45 mb-1.5">Display name</label>
+                    <input type="text" value={profileForm.display_name} onChange={(e) => updateProfileField("display_name", e.target.value)} maxLength={80} autoFocus className="w-full max-w-xl px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                  </div>
+                  {user?.role === "artist" && (
+                    <>
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/45 mb-1.5">Location</label>
+                        <input type="text" value={profileForm.location} onChange={(e) => updateProfileField("location", e.target.value)} maxLength={120} placeholder="Bangkok, Thailand" className="w-full max-w-xl px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-[0.1em] text-white/45 mb-1.5">Bio</label>
+                        <textarea value={profileForm.bio} onChange={(e) => updateProfileField("bio", e.target.value)} maxLength={250} rows={3} placeholder="Tell fans about your sound." className="w-full max-w-xl resize-none px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
-                <h1 className="text-white text-[2rem] font-bold tracking-tight leading-tight">{savedProfile.display_name || user?.username || "Profile"}</h1>
+                <div>
+                  <h1 className="text-white text-[2rem] font-bold tracking-tight leading-tight">{savedProfile.display_name || user?.username || "Profile"}</h1>
+                  {user?.role === "artist" && (savedProfile.location || savedProfile.bio) && (
+                    <div className="mt-2 flex flex-col gap-1 text-[13px] text-white/45">
+                      {savedProfile.location && <span>{savedProfile.location}</span>}
+                      {savedProfile.bio && <span className="max-w-2xl leading-relaxed">{savedProfile.bio}</span>}
+                    </div>
+                  )}
+                </div>
               )}
             </form>
 
             <div className="flex flex-wrap items-center gap-3 mt-4">
+              {user?.email && (
+                <p className="text-white/40 text-[13px] hidden">{user.email}</p>
+              )}
               {isEditingProfile ? (
                 <>
                   <button type="submit" form="profile-edit-form" disabled={profileSaving} className="px-4 py-2 text-[13px] font-semibold text-white bg-[#fc3c44] hover:bg-[#e8333b] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{profileSaving ? "Saving..." : "Save"}</button>
