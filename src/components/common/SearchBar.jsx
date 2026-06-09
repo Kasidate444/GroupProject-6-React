@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet } from "../../lib/api";
 import { formatPrice } from "../../shop/data/helpers";
