@@ -4,9 +4,16 @@ import { useAuth } from "../../hooks/useAuth.js";
 import SearchBar from "./SearchBar.jsx";
 import logoA from "../../assets/landing-page/logoa.png";
 import introArtist from "../../assets/intro_artist2_sound.mp3";
+import introArtist2 from "../../assets/intro_artist2_sound2.mp3";
+import introArtist3 from "../../assets/intro_artist2_sound3.mp3";
 import { useAudio } from "../../contexts/AudioContext";
 import { CartContext } from "../../shop/context/CartContext";
 import UserDropdown from "./UserDropdown.jsx";
+
+const artistIntroSounds = [introArtist, introArtist2, introArtist3];
+
+const getRandomArtistIntro = () =>
+  artistIntroSounds[Math.floor(Math.random() * artistIntroSounds.length)];
 
 export default function Head() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -28,9 +35,7 @@ export default function Head() {
   };
 
   const handleArtistClick = () => {
-    try {
-      audio?.playIntro?.(introArtist, { volume: 0.7 });
-    } catch (e) {}
+    audio?.playIntro?.(getRandomArtistIntro(), { volume: 0.7 });
     navigate("/artist");
   };
 
@@ -75,7 +80,7 @@ export default function Head() {
             aria-label="Go to profile"
           >
             <span aria-hidden="true" className="text-lg">
-              🎧
+              ・滓ｫ・繝ｻ
             </span>
             <span className="sr-only">Fan headphone icon - Go to profile</span>
           </button>

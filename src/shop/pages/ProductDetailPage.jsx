@@ -95,7 +95,16 @@ export default function ProductDetailPage() {
 
   const genres = getProductGenres(product);
   const tracks = getProductTracks(product);
-  const albumTrackProducts = product.type === "album" ? tracks : [];
+  const albumTrackProducts = product.type === "album"
+    ? tracks.map((track, index) => ({
+        ...track,
+        slug: product.slug,
+        cover_url: product.cover_url,
+        artist: product.artist,
+        artist_id: product.artist_id,
+        title: track.title || `Track ${index + 1}`,
+      }))
+    : [];
   const artistSlug = getArtistSlug(product);
   const artistName = getArtistName(product);
   const finalPrice = product.name_your_price ? customPrice : product.price;
@@ -172,11 +181,12 @@ export default function ProductDetailPage() {
                 <p className="text-[11px] uppercase tracking-widest text-white/35 mb-2">Tracklist ({tracks.length} tracks)</p>
                 <ul className="rounded-lg border border-white/[0.064] divide-y divide-white/[0.064] overflow-hidden">
                   {tracks.map((track, index) => {
-                    const playing = isProductPlaying(track._id);
+                    const playableTrack = albumTrackProducts[index] || track;
+                    const playing = isProductPlaying(playableTrack._id);
                     return (
                       <li key={track._id || index} className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${playing ? "bg-accent/10" : "bg-white/4 hover:bg-white/8"}`}>
                         <div className="w-6 flex items-center justify-center">
-                          <PlayButton product={track} contextQueue={albumTrackProducts} size="sm" variant="minimal" />
+                          <PlayButton product={playableTrack} contextQueue={albumTrackProducts} size="sm" variant="minimal" />
                         </div>
                         <span className={`flex-1 text-[14px] ${playing ? "text-accent font-semibold" : "text-white/85"}`}>{track.title || `Track ${index + 1}`}</span>
                         <span className="text-white/35 text-[12px] tabular-nums">{formatDuration(track.duration_sec)}</span>

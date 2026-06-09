@@ -25,6 +25,7 @@ export default function ProfilePageArtist() {
   const { user, isLoggedIn } = useAuth();
   const mockArtist = artists.find((artist) => artist.user_id === user?._id) || artists[0];
   const [artistProfile, setArtistProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const currentArtist = artistProfile || buildArtistProfile(null, mockArtist, user);
   const artistProducts = getProductsByArtist(currentArtist?._id);
   const [activeTab, setActiveTab] = useState("overview");
@@ -53,6 +54,7 @@ export default function ProfilePageArtist() {
     let cancelled = false;
 
     const loadArtistProfile = async () => {
+      setProfileLoading(true);
       try {
         const profile = await apiGet("/profile");
         if (cancelled) return;
@@ -73,6 +75,8 @@ export default function ProfilePageArtist() {
           setProfileStatus("error");
           setProfileMessage(error.message || "Unable to load artist profile.");
         }
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
     };
 
@@ -87,6 +91,7 @@ export default function ProfilePageArtist() {
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (user?.role !== "artist") return <Navigate to="/profile" replace />;
+  if (profileLoading && !artistProfile) return <ArtistStudioSkeleton />;
 
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -410,6 +415,37 @@ export default function ProfilePageArtist() {
       <UploadModal isOpen={isMerchOpen} onClose={() => setIsMerchOpen(false)} title="Upload Merch" icon={"\u2726"} width={680}>
         <UploadMerchForm onCancel={() => setIsMerchOpen(false)} onSuccess={() => setIsMerchOpen(false)} />
       </UploadModal>
+    </div>
+  );
+}
+
+function ArtistStudioSkeleton() {
+  return (
+    <div className="min-h-screen bg-bg font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="h-80 animate-pulse bg-white/[0.06]" />
+      <div className="px-[5%] -mt-20 relative z-10 md:px-[10%]">
+        <div className="flex flex-col gap-4 items-start md:flex-row md:items-end md:gap-6">
+          <div className="h-36 w-36 shrink-0 rounded-full bg-bg-card ring-4 ring-bg" />
+          <div className="flex-1 pb-2 min-w-0 space-y-3">
+            <div className="h-6 w-20 animate-pulse rounded-full bg-white/10" />
+            <div className="h-10 w-64 max-w-full animate-pulse rounded bg-white/10" />
+            <div className="h-4 w-80 max-w-full animate-pulse rounded bg-white/8" />
+          </div>
+          <div className="h-11 w-32 animate-pulse rounded-full bg-white/10" />
+        </div>
+      </div>
+      <div className="mt-10 px-[5%] md:px-[10%]">
+        <div className="flex gap-2 border-b border-white/10 pb-3">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="h-7 w-20 animate-pulse rounded bg-white/8" />
+          ))}
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-32 animate-pulse rounded-xl border border-white/8 bg-white/[0.04]" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
