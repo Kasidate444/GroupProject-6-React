@@ -7,15 +7,16 @@ import { useAudioPlayer } from "../context/AudioPlayerContext";
 import PlayButton from "../components/audio/PlayButton";
 import ProductCard from "../components/product/ProductCard";
 import {
-  findProductBySlug,
-  getProductWithDetails,
-  findProductById,
   formatPrice,
   formatDuration,
   formatDate,
-  getArtistGenres,
-  getProductsByArtist,
 } from "../data/helpers";
+import {
+  getProductGenres,
+  getProductTracks,
+  getArtistSlug,
+  getArtistName,
+} from "../utils/productShape";
 import { getMerchWithLiveStock } from "../data/stockService.js";
 
 export default function ProductDetailPage() {
@@ -115,7 +116,7 @@ export default function ProductDetailPage() {
     if (addToCartDisabled) return;
 
     addToCart(product, {
-      quantity: purchaseQty,
+      quantity: qty,
       unitPrice: finalPrice,
       variantId: selectedVariant?.variant_id || null,
     });
@@ -242,7 +243,7 @@ export default function ProductDetailPage() {
             )}
 
             <button onClick={handleAddToCart} disabled={addToCartDisabled} className={`flex items-center justify-center gap-3 px-8 py-3.5 rounded-full font-semibold text-[15px] transition-all active:scale-95 w-full md:w-fit ${added ? "bg-white/[0.07] border border-white/15 text-white/60 cursor-default" : isMerchSoldOut ? "bg-white/5 text-white/30 cursor-not-allowed" : addToCartDisabled ? "bg-white/5 text-white/25 cursor-not-allowed" : "bg-accent hover:bg-accent-hover text-white"}`}>
-              {added ? "Added to cart" : isMerchSoldOut ? "Sold Out" : `Add to cart - ${formatPrice(finalPrice * purchaseQty)}`}
+              {added ? "Added to cart" : isMerchSoldOut ? "Sold Out" : `Add to cart - ${formatPrice(finalPrice * qty)}`}
             </button>
 
             {product.type !== "merch" && <p className="text-white/25 text-[11px]">Includes unlimited streaming plus download in MP3, FLAC, and more.</p>}
