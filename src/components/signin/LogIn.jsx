@@ -30,7 +30,7 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice }) {
+export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
@@ -91,10 +91,6 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
           <p className="ka-login-card__heading">
             <span className="ka-login-card__heading-accent">Login</span> Your Account
           </p>
-
-          {notice && (
-            <div className="ka-login-card__notice">{notice}</div>
-          )}
 
           {errors.form && (
             <div className="ka-login-card__error">{errors.form}</div>
