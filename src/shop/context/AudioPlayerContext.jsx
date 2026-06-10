@@ -19,6 +19,7 @@ export function AudioPlayerProvider({ children }) {
   const [volume, setVolume] = useState(0.7);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef(null);
+  const preferFullRef = useRef(false);
 
   if (!audioRef.current) {
     audioRef.current = new Audio();
@@ -32,7 +33,7 @@ export function AudioPlayerProvider({ children }) {
 
     const product = nextQueue[index];
     const track = getFirstTrack(product);
-    const audioSrc = getTrackAudioSrc(track);
+    const audioSrc = getTrackAudioSrc(track, preferFullRef.current);
     if (!audioSrc) return;
 
     setCurrentProduct(product);
@@ -99,15 +100,18 @@ export function AudioPlayerProvider({ children }) {
     audio.volume = volume;
   }, [volume]);
 
-  const playProduct = (product, contextQueue = null) => {
+  const playProduct = (product, contextQueue = null, options = {}) => {
     if (!product) return;
+    const preferFull = Boolean(options.preferFull);
+    preferFullRef.current = preferFull;
+
     const track = getFirstTrack(product);
-    if (!getTrackAudioSrc(track)) return;
+    if (!getTrackAudioSrc(track, preferFull)) return;
 
     let playableQueue;
     let index;
     if (contextQueue && Array.isArray(contextQueue)) {
-      playableQueue = contextQueue.filter((item) => getTrackAudioSrc(getFirstTrack(item)));
+      playableQueue = contextQueue.filter((item) => getTrackAudioSrc(getFirstTrack(item), preferFull));
       index = playableQueue.findIndex((item) => item._id === product._id);
       if (index < 0) {
         playableQueue = [product];

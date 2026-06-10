@@ -5,6 +5,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { apiGet, apiUpload } from "../../lib/api";
 import { artists, orders, products, users } from "../data/mockDb";
 import { getProductsByArtist } from "../data/helpers";
+import { useAudioPlayer } from "../context/AudioPlayerContext";
+import PlayButton from "../components/audio/PlayButton";
 import UploadModal from "../../components/UploadModal";
 import UploadSingleForm from "../../components/UploadSingleForm";
 import UploadAlbumForm from "../../components/UploadAlbumForm";
@@ -469,6 +471,8 @@ function ArtistStudioSkeleton() {
   );
 }
 function ProductGrid({ products }) {
+  const { isProductPlaying } = useAudioPlayer();
+
   if (products.length === 0) {
     return (
       <div className="py-12">
@@ -479,24 +483,34 @@ function ProductGrid({ products }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
-      {products.map((product) => (
-        <Link key={product._id} to={`/product/${product.slug}`} className="flex flex-col gap-2 no-underline group">
-          <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
-            <img
-              src={product.cover_url}
-              alt={product.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          </div>
-          <div>
-            <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
-              {product.title}
-            </p>
-            <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
-          </div>
-        </Link>
-      ))}
+      {products.map((product) => {
+        const isPlaying = isProductPlaying(product._id);
+        const showPlayButton = product.type !== "merch";
+
+        return (
+          <Link key={product._id} to={`/product/${product.slug}`} className="flex flex-col gap-2 no-underline group">
+            <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
+              <img
+                src={product.cover_url}
+                alt={product.title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+              {showPlayButton && (
+                <div className={`absolute bottom-2 right-2 transition-opacity ${isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                  <PlayButton product={product} contextQueue={products} variant="overlay" preferFull />
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
+                {product.title}
+              </p>
+              <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
