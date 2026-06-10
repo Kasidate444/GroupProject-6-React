@@ -902,3 +902,14 @@ h4 {
   font-size: 12px;
   text-align: center;
 }
+
+.ka-login-card__notice {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #4f46e5;
+  font-size: 12px;
+  text-align: center;
+}

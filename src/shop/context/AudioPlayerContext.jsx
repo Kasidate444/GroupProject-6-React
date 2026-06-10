@@ -3,10 +3,24 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { findArtistById } from "../data/helpers";
-import { getFirstPlayableTrack, getTrackAudioSrc } from "../utils/productShape";
+import { getFirstPlayableTrack, getProductTracks, getTrackAudioSrc } from "../utils/productShape";
 
 const AudioPlayerContext = createContext(null);
 const getFirstTrack = (product) => getFirstPlayableTrack(product);
+
+const buildTrackQueueItem = (product, track, index) => ({
+  _id: `${product._id}::${track._id ?? index}`,
+  _albumId: product._id,
+  title: track.title || product.title,
+  slug: product.slug,
+  cover_url: product.cover_url,
+  artist: product.artist,
+  artist_id: product.artist_id,
+  type: product.type,
+  audio_file_url: track.audio_file_url,
+  preview_url: track.preview_url,
+  audio_url: track.audio_url,
+});
 
 export function AudioPlayerProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +33,7 @@ export function AudioPlayerProvider({ children }) {
   const [volume, setVolume] = useState(0.7);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef(null);
+  const preferFullRef = useRef(false);
 
   if (!audioRef.current) {
     audioRef.current = new Audio();
@@ -32,7 +47,7 @@ export function AudioPlayerProvider({ children }) {
 
     const product = nextQueue[index];
     const track = getFirstTrack(product);
-    const audioSrc = getTrackAudioSrc(track);
+    const audioSrc = getTrackAudioSrc(track, preferFullRef.current);
     if (!audioSrc) return;
 
     setCurrentProduct(product);
@@ -99,15 +114,30 @@ export function AudioPlayerProvider({ children }) {
     audio.volume = volume;
   }, [volume]);
 
-  const playProduct = (product, contextQueue = null) => {
+  const playProduct = (product, contextQueue = null, options = {}) => {
     if (!product) return;
+    const preferFull = Boolean(options.preferFull);
+    preferFullRef.current = preferFull;
+
+    const albumTracks = getProductTracks(product);
+    if (albumTracks.length > 1) {
+      const playableQueue = albumTracks
+        .map((albumTrack, index) => buildTrackQueueItem(product, albumTrack, index))
+        .filter((item) => getTrackAudioSrc(item, preferFull));
+      if (playableQueue.length === 0) return;
+
+      setQueue(playableQueue);
+      playAtIndex(playableQueue, 0);
+      return;
+    }
+
     const track = getFirstTrack(product);
-    if (!getTrackAudioSrc(track)) return;
+    if (!getTrackAudioSrc(track, preferFull)) return;
 
     let playableQueue;
     let index;
     if (contextQueue && Array.isArray(contextQueue)) {
-      playableQueue = contextQueue.filter((item) => getTrackAudioSrc(getFirstTrack(item)));
+      playableQueue = contextQueue.filter((item) => getTrackAudioSrc(getFirstTrack(item), preferFull));
       index = playableQueue.findIndex((item) => item._id === product._id);
       if (index < 0) {
         playableQueue = [product];
@@ -166,7 +196,8 @@ export function AudioPlayerProvider({ children }) {
   const currentArtist = currentProduct?.artist || (currentProduct ? findArtistById(currentProduct.artist_id) : null);
   const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
   const hasPrev = currentIndex > 0;
-  const isProductPlaying = (productId) => isPlaying && currentProduct?._id === productId;
+  const isProductPlaying = (productId) =>
+    isPlaying && (currentProduct?._id === productId || currentProduct?._albumId === productId);
 
   return (
     <AudioPlayerContext.Provider
