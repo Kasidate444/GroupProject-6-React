@@ -120,8 +120,9 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
                 className="ka-login-card__utoggle"
                 onClick={() => setShowPassword(!showPassword)}
                 type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
             {errors.password && <p className="ka-login-card__field-error">{errors.password}</p>}
