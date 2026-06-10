@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../../lib/api";
 import { socket } from "../../lib/socket";
 
@@ -42,23 +41,6 @@ const buildRegisterRequest = (userData = {}) => {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredSession);
   const [authLoading, setAuthLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const handleSessionExpired = () => {
-      localStorage.removeItem("session");
-      setUser(null);
-      socket.disconnect();
-
-      if (location.pathname !== "/login") {
-        navigate("/login", { state: { sessionExpired: true } });
-      }
-    };
-
-    window.addEventListener("auth:session-expired", handleSessionExpired);
-    return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
-  }, [navigate, location.pathname]);
 
   useEffect(() => {
     let cancelled = false;
