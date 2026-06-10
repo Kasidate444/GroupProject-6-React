@@ -26,13 +26,14 @@ export const getFirstPlayableTrack = (product) => {
   return getProductTracks(product).find((track) => track?.preview_url || track?.audio_file_url || track?.audio_url?.url) || null;
 };
 
-export const getTrackAudioSrc = (track) => {
+export const getTrackAudioSrc = (track, preferFull = false) => {
+  if (preferFull) return track?.audio_file_url || track?.audio_url?.url || track?.preview_url || null;
   return track?.preview_url || track?.audio_file_url || track?.audio_url?.url || null;
 };
 
-export const canPreviewProduct = (product) => {
+export const canPreviewProduct = (product, preferFull = false) => {
   const track = getFirstPlayableTrack(product);
-  return Boolean(getTrackAudioSrc(track));
+  return Boolean(getTrackAudioSrc(track, preferFull));
 };
 
 export const getArtistName = (product) => {
