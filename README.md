@@ -32,6 +32,8 @@
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
 - [Team](#team)
+- [Credits](#credits)
+- [Disclaimer](#disclaimer)
 
 ---
 
@@ -292,6 +294,28 @@ VITE_API_BASE_URL=http://localhost:3000
 | Thaweeratch Khongrachata | Product Designer |
 | Mata Chobmee | Backend Engineer |
 | Piyawat Kamton | Team Coordinator |
+
+---
+
+## Credits
+
+Special thanks and credits to the artists, platforms, and creators that inspired or were referenced in this educational project.
+
+- Sahred Toy
+- Bandcamp
+- LANDOKMAI
+- Season Five
+- Baby monster
+
+---
+
+## Disclaimer
+
+All images, music, artist names, and related media used in this project belong to their respective owners and copyright holders. We do not claim ownership of any third-party content included on this website.
+
+No copyright infringement is intended, and this project is not used for commercial purposes or profit.
+
+If any content owner would like their material to be removed, please contact us and we will take appropriate action immediately.
 
 ---
 

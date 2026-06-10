@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import AudioPlayer from "./components/audio/AudioPlayer";
-import CartDrawer from "./components/cart/CartDrawer";
 import { AudioPlayerProvider, useAudioPlayer } from "./context/AudioPlayerContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { FollowProvider } from "../contexts/FollowContext";
@@ -11,7 +10,6 @@ function ShopContent() {
   return (
     <div className={`transition-[padding] duration-300 ${isOpen ? "pr-75" : ""}`}>
       <Outlet />
-      <CartDrawer />
       <AudioPlayer />
     </div>
   );

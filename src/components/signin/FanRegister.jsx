@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import logoB from "../../assets/landing-page/logob.png";
+import RegisterSuccessModal from "./RegisterSuccessModal";
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -32,6 +33,7 @@ export default function FanRegister({ onGoLogIn, onGoArtist, onRegister }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -95,6 +97,7 @@ export default function FanRegister({ onGoLogIn, onGoArtist, onRegister }) {
         lastName: form.lastName.trim(),
         password: form.password,
       });
+      setRegistered(true);
     } catch (err) {
       setErrors({ server: err.message || "Registration failed. Please try again." });
     } finally {
@@ -310,6 +313,8 @@ export default function FanRegister({ onGoLogIn, onGoArtist, onRegister }) {
         </div>
 
       </div>
+
+      <RegisterSuccessModal open={registered} role="fan" onGoLogin={onGoLogIn} />
     </div>
   );
 }
