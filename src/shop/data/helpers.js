@@ -120,7 +120,7 @@ export const filterProductsByCategory = (productList, category) => {
       return p.type === "merch" && m?.merch_type === "tote";
     }
 
-    if (category === "vinyl" || category === "cd" || category === "cassette") {
+    if (category === "vinyl" || category === "cd" || category === "cassette" || category === "other") {
       const m = findMerchByProductId(p._id);
       return p.type === "merch" && m?.merch_type === category;
     }
