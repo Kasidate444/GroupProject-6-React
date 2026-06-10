@@ -17,34 +17,34 @@ export default function PlayButton({
     e.preventDefault();
     e.stopPropagation();
     if (!canPlay) return;
- 
+
     if (currentProduct?._id === product._id) {
       togglePlay();
     } else {
       playProduct(product, contextQueue);
     }
   };
- 
+
   if (!canPlay) return null;
- 
+
   const sizeClasses = {
     sm: "w-7 h-7",
     md: "w-10 h-10",
     lg: "w-14 h-14",
   };
   const iconSize = { sm: 12, md: 16, lg: 22 };
- 
+
   const variantClasses = {
     default: "bg-white text-black hover:scale-105 active:scale-95 shadow-md",
     overlay: "bg-accent/95 backdrop-blur text-white hover:bg-accent hover:scale-105 active:scale-95 shadow-lg",
     minimal: "bg-white/10 backdrop-blur text-white hover:bg-white/20 active:scale-95",
   };
- 
+
   return (
     <button
       onClick={handleClick}
       className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-full flex items-center justify-center transition-all`}
-      aria-label={isPlaying ? "Pause" : "Play"}
+      aria-label={isPlaying ? "Pause" : "Play preview"}
     >
       {isPlaying ? (
         <svg width={iconSize[size]} height={iconSize[size]} viewBox="0 0 24 24" fill="currentColor">
