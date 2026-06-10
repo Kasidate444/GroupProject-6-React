@@ -2,20 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import logoB from "../../assets/landing-page/logob.png";
 
-const IconUser = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-  </svg>
-);
-
-const IconLock = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -30,7 +16,7 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice }) {
+export default function LogIn({ onGoFan, onGoForgot, onLogIn, notice }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
@@ -54,6 +40,8 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
   };
 
   const handleLogIn = async () => {
+    if (isLoading) return;
+
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -113,6 +101,7 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
                 setEmail(e.target.value);
                 if (errors.email) setErrors((p) => ({ ...p, email: null }));
               }}
+              disabled={isLoading}
             />
             {errors.email && <p className="ka-login-card__field-error">{errors.email}</p>}
           </div>
@@ -129,12 +118,14 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
                   setPassword(e.target.value);
                   if (errors.password) setErrors((p) => ({ ...p, password: null }));
                 }}
+                disabled={isLoading}
               />
               <button
                 className="ka-login-card__utoggle"
                 onClick={() => setShowPassword(!showPassword)}
                 type="button"
                 aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={isLoading}
               >
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
@@ -161,8 +152,16 @@ export default function LogIn({ onGoFan, onGoArtist, onGoForgot, onLogIn, notice
             className="ka-login-card__btn"
             onClick={handleLogIn}
             disabled={isLoading}
+            aria-busy={isLoading}
           >
-            {isLoading ? "LOGGING IN…" : "SUBMIT"}
+            {isLoading ? (
+              <span className="ka-login-card__btn-loading">
+                <span className="ka-login-card__spinner" aria-hidden="true" />
+                Logging in
+              </span>
+            ) : (
+              "SUBMIT"
+            )}
           </button>
 
           <div className="ka-login-card__footer">

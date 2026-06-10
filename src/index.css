@@ -848,6 +848,9 @@ h4 {
 .ka-login-card__btn {
   width: 100%;
   height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 8px;
   background: #0c2060;
@@ -870,6 +873,29 @@ h4 {
 
 .ka-login-card__btn:disabled {
   opacity: 0.65;
+  cursor: wait;
+}
+
+.ka-login-card__btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.ka-login-card__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.36);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  animation: ka-login-spin 750ms linear infinite;
+}
+
+@keyframes ka-login-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ka-login-card__footer {
