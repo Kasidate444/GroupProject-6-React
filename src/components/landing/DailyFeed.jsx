@@ -1,6 +1,6 @@
 import { useState } from "react";
 import mainCoverImg from "../../assets/landing-page/cxa.jpg";
-import articleOneImg from "../../assets/landing-page/babymonster-monsters.jpg";
+import articleOneImg from "../../assets/landing-page/babymonster-monstersกรณีศึกษา.png";
 import articleTwoImg from "../../assets/landing-page/indie-artists.jpg";
 import ArticleModal from "./ArticleModal";
 
