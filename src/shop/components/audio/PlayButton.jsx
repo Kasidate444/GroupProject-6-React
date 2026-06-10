@@ -24,7 +24,7 @@ export default function PlayButton({
     event.stopPropagation();
     if (!canPlay) return;
 
-    if (currentProduct?._id === product._id) {
+    if (currentProduct?._id === product._id || currentProduct?._albumId === product._id) {
       togglePlay();
     } else {
       playProduct(product, contextQueue, { preferFull });
