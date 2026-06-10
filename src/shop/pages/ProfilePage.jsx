@@ -5,10 +5,10 @@ import { useFollow } from "../../contexts/FollowContext";
 import { useWishlist } from "../context/WishlistContext";
 import { apiGet, apiUpload } from "../../lib/api";
 import FollowButton from "../components/FollowButton";
-import ProductCard from "../components/product/ProductCard";
+import { formatPrice } from "../data/helpers";
 
 export default function ProfilePage() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, authLoading } = useAuth();
   const { followedArtistIds, setFollowedArtists } = useFollow();
   const { wishlistedIds, setWishlistedProducts } = useWishlist();
   const [followingArtists, setFollowingArtists] = useState([]);
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [profileForm, setProfileForm] = useState({ display_name: "", location: "", bio: "", profile_picture: null, banner_picture: null });
   const [profileStatus, setProfileStatus] = useState(null);
   const [profileMessage, setProfileMessage] = useState("");
+  const [profileLoading, setProfileLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
@@ -31,9 +32,11 @@ export default function ProfilePage() {
     let cancelled = false;
 
     const loadProfile = async () => {
+      setProfileLoading(true);
       try {
-        const profile = await apiGet("/profile");
+        const response = await apiGet("/profile");
         if (cancelled) return;
+        const profile = response.data || response;
 
         const nextProfile = {
           display_name: profile.display_name || profile.username || "",
@@ -48,6 +51,7 @@ export default function ProfilePage() {
           .filter(Boolean);
         const nextWishlistProducts = (profile.wishlist || [])
           .map((item) => normalizeProfileProduct(item.product_id || item))
+          .filter(isWishlistVisibleProduct)
           .filter(Boolean);
         const nextFollowingArtists = (profile.followingArtist || []).map(normalizeProfileArtist).filter(Boolean);
 
@@ -58,24 +62,31 @@ export default function ProfilePage() {
         setCollectionProducts(nextCollectionProducts);
         setWishlistProducts(nextWishlistProducts);
         setFollowingArtists(nextFollowingArtists);
-        setWishlistedProducts(nextWishlistProducts.map((product) => product._id));
-        setFollowedArtists(nextFollowingArtists.map((artist) => artist._id));
+        setWishlistedProducts(nextWishlistProducts.map((product) => toIdString(product._id)));
+        setFollowedArtists(nextFollowingArtists.map((artist) => toIdString(artist._id)));
       } catch (err) {
         if (!cancelled) {
           setProfileStatus("error");
           setProfileMessage(err.message || "Unable to load profile.");
         }
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
     };
 
-    if (isLoggedIn) loadProfile();
+    if (authLoading) return undefined;
+    if (isLoggedIn) {
+      loadProfile();
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn, setFollowedArtists, setWishlistedProducts]);
+  }, [authLoading, isLoggedIn, setFollowedArtists, setWishlistedProducts]);
 
+  if (authLoading) return <ProfilePageSkeleton />;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (profileLoading) return <ProfilePageSkeleton />;
 
   const updateProfileField = (name, value) => {
     setProfileForm((prev) => ({ ...prev, [name]: value }));
@@ -161,8 +172,8 @@ export default function ProfilePage() {
     }
   };
 
-  const visibleWishlistProducts = wishlistProducts.filter((product) => wishlistedIds.includes(product._id));
-  const visibleFollowingArtists = followingArtists.filter((artist) => followedArtistIds.includes(artist._id));
+  const visibleWishlistProducts = wishlistProducts.filter((product) => isWishlistVisibleProduct(product) && wishlistedIds.includes(toIdString(product._id)));
+  const visibleFollowingArtists = followingArtists.filter((artist) => followedArtistIds.includes(toIdString(artist._id)));
 
   const tabs = [
     { key: "collection", label: "collection", count: collectionProducts.length },
@@ -217,7 +228,8 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <label className="block text-[11px] uppercase tracking-[0.1em] text-white/45 mb-1.5">Bio</label>
-                        <textarea value={profileForm.bio} onChange={(e) => updateProfileField("bio", e.target.value)} maxLength={250} rows={3} placeholder="Tell fans about your sound." className="w-full max-w-xl resize-none px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                        <textarea value={profileForm.bio} onChange={(e) => updateProfileField("bio", e.target.value)} maxLength={500} rows={3} placeholder="Tell fans about your sound." className="w-full max-w-xl resize-none px-3.5 py-2.5 rounded-lg border outline-none text-white text-[14px] bg-white/[0.05] border-white/10 focus:border-white/30" />
+                        <p className="mt-1 text-[11px] text-white/30">{profileForm.bio.length}/500</p>
                       </div>
                     </>
                   )}
@@ -275,8 +287,12 @@ export default function ProfilePage() {
 
 function normalizeProfileArtist(artist) {
   if (!artist) return null;
+  if (typeof artist === "string") {
+    return { _id: artist, slug: artist, name: "Artist" };
+  }
   return {
     ...artist,
+    _id: toIdString(artist._id),
     slug: artist.slug || artist.username || artist._id,
     name: artist.name || artist.display_name || artist.username || "Artist",
     banner_url: artist.banner_url || artist.banner_picture_url || artist.banner_picture?.url || artist.profile_picture?.url,
@@ -284,12 +300,44 @@ function normalizeProfileArtist(artist) {
   };
 }
 
+function ProfilePageSkeleton() {
+  return (
+    <div className="min-h-screen bg-bg font-['Plus_Jakarta_Sans',sans-serif] text-white">
+      <div className="h-75 animate-pulse bg-white/[0.06]" />
+      <div className="px-[5%] -mt-20 relative z-10 md:px-[10%]">
+        <div className="flex flex-col gap-6 md:flex-row">
+          <div className="h-32 w-32 shrink-0 animate-pulse rounded-2xl bg-bg-card border-4 border-bg" />
+          <div className="flex-1 pt-4 space-y-3">
+            <div className="h-8 w-52 animate-pulse rounded bg-white/10" />
+            <div className="h-4 w-72 max-w-full animate-pulse rounded bg-white/8" />
+            <div className="h-9 w-28 animate-pulse rounded-lg bg-white/10" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-10 px-[5%] md:px-[10%]">
+        <div className="h-10 animate-pulse rounded bg-white/[0.05]" />
+        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="aspect-square animate-pulse rounded-lg bg-white/[0.06]" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function normalizeProfileProduct(product) {
   if (!product) return null;
+  if (typeof product === "string") return null;
+  const artist = product.artist && typeof product.artist === "object"
+    ? normalizeProfileArtist(product.artist)
+    : null;
+
   return {
     ...product,
-    artist_id: product.artist?._id || product.artist_id || product.artist,
-    artist: product.artist ? normalizeProfileArtist(product.artist) : product.artist,
+    _id: toIdString(product._id),
+    artist_id: toIdString(product.artist?._id || product.artist_id || product.artist),
+    artist,
     merch_type: product.merchType || product.merch_type,
     cover_url: product.cover_url || product.coverUrl?.url,
     name_your_price: product.name_your_price ?? product.nameYourPrice,
@@ -297,6 +345,17 @@ function normalizeProfileProduct(product) {
     release_date: product.release_date ?? product.releaseDate,
     tracks: product.tracks || [],
   };
+}
+
+function isWishlistVisibleProduct(product) {
+  if (!product) return false;
+  return product.status === "published" && !product.deleted_at && !product.deletedAt;
+}
+
+function toIdString(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.toString?.() || String(value);
 }
 
 function EmptyState({ message, linkLabel }) {
@@ -312,8 +371,43 @@ function WishlistGrid({ products, emptyMessage }) {
   if (products.length === 0) return <EmptyState message={emptyMessage} linkLabel="Browse the shop" />;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
-      {products.map((product) => <ProductCard key={product._id} product={product} contextQueue={products} />)}
+      {products.map((product) => <ProfileProductCard key={product._id} product={product} />)}
     </div>
+  );
+}
+
+function ProfileProductCard({ product }) {
+  const artistName = product.artist?.name || product.artist?.display_name || product.artist?.username || "Unknown artist";
+  const productPath = `/product/${product.slug || product._id}`;
+  const price = Number.isFinite(Number(product.price)) ? Number(product.price) : 0;
+
+  return (
+    <Link to={productPath} className="group flex flex-col gap-2 no-underline">
+      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
+        {product.cover_url ? (
+          <img
+            src={product.cover_url}
+            alt={product.title || "Product"}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-white/[0.06] text-[12px] text-white/30">
+            No image
+          </div>
+        )}
+        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase text-white/65 backdrop-blur-sm">
+          {product.type || "product"}
+        </span>
+      </div>
+      <div>
+        <p className="truncate text-[13px] font-medium text-white/85 transition-colors group-hover:text-white">
+          {product.title || "Untitled product"}
+        </p>
+        <p className="truncate text-[11px] text-white/40">{artistName}</p>
+        <p className="mt-0.5 text-[12px] font-semibold text-white/70">{formatPrice(price)}</p>
+      </div>
+    </Link>
   );
 }
 

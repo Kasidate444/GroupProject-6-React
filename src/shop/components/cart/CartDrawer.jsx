@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+
+const MAX_CART_QUANTITY = 9999;
 import { useAuth } from "../../../hooks/useAuth";
 import { formatPrice, findProductById, getArtistGenres } from "../../data/helpers";
 
@@ -207,7 +209,8 @@ function CartItem({ item, onRemove, onUpdateQty }) {
                   </span>
                   <button
                     onClick={() => onUpdateQty(item.quantity + 1)}
-                    className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold"
+                    disabled={item.quantity >= MAX_CART_QUANTITY}
+                    className="w-7 h-7 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     +
                   </button>

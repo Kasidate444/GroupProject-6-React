@@ -1,9 +1,82 @@
 import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { deductStock } from '../../data/stockService.js';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, PAYMENT_METHODS, ORDER_STATUS } from './constants.js';
 import { validateShippingInformation, validateCreditCardDetails } from './validation.js';
-import { calculateCartSubtotal, calculateDiscountAmount, calculateOrderTotal, roundToTwoDecimals } from './calculations.js';
+import { calculateCartSubtotal, calculateOrderTotal, roundToTwoDecimals } from './calculations.js';
+import { apiDelete, apiPost } from '../../../lib/api.js';
+
+const mapShippingAddress = (shippingInformation) => {
+  if (!shippingInformation) return null;
+
+  return {
+    full_name: shippingInformation.fullName || '',
+    address_line1: shippingInformation.address || '',
+    city: shippingInformation.city || '',
+    postal_code: shippingInformation.postalCode || '',
+    country: shippingInformation.country || '',
+  };
+};
+
+const mapOrderItem = (item) => {
+  const productId = item.product_id?._id || item.product_id || item.productId;
+  const productType = item.product_type || item.type;
+
+  return {
+    id: `${productId}-${item.variant_id || item.variantId || 'digital'}`,
+    productId,
+    variantId: item.variant_id || item.variantId || null,
+    name: item.title_snapshot || item.name || 'Untitled item',
+    artist: item.artist_name_snapshot || item.artist || 'Unknown artist',
+    image: item.cover_url_snapshot || item.image || '',
+    unitPrice: item.unit_price ?? item.unitPrice ?? 0,
+    quantity: item.quantity || 1,
+    type: productType === 'merch' || productType === 'merchandise' ? 'merchandise' : 'digital',
+    downloadTracks: item.download_tracks || item.downloadTracks || [],
+  };
+};
+
+const createBackendOrder = async ({
+  cartItems,
+  paymentDetails,
+  shippingInformation,
+  discountCode,
+  discountAmount,
+  shippingFee,
+}) => {
+  await apiDelete('/cart');
+
+  for (const item of cartItems) {
+    await apiPost('/cart/items', {
+      product_id: item.productId,
+      variant_id: item.variantId || null,
+      quantity: item.quantity || 1,
+    });
+  }
+
+  const response = await apiPost('/orders', {
+    payment_method: paymentDetails.method,
+    shipping_address: mapShippingAddress(shippingInformation),
+    discount_code: discountCode || null,
+    discount_amount: discountAmount,
+    shipping_fee: shippingFee,
+  });
+
+  const order = response.data || response;
+  const createdAt = order.createdAt || order.created_at || Date.now();
+
+  return {
+    id: order._id || order.id,
+    items: (order.items || []).map(mapOrderItem),
+    shipping: shippingInformation,
+    payment: paymentDetails,
+    subtotal: order.subtotal ?? roundToTwoDecimals(calculateCartSubtotal(cartItems)),
+    discountCode: discountCode || null,
+    discountAmount: order.discount_amount ?? discountAmount,
+    total: order.total ?? roundToTwoDecimals(calculateOrderTotal(calculateCartSubtotal(cartItems), discountAmount) + shippingFee),
+    status: order.order_status || ORDER_STATUS.PROCESSING,
+    createdAt,
+  };
+};
 
 /**
  * OrderSubmissionProcessor Component
@@ -125,34 +198,14 @@ export default function OrderSubmissionProcessor({
     setSubmitError(null);
 
     try {
-      // Calculate order totals
-      const subtotal = roundToTwoDecimals(calculateCartSubtotal(cartItems));
-      const total = roundToTwoDecimals(calculateOrderTotal(subtotal, discountAmount) + shippingFee);
-
-      // Build order object
-      const order = {
-        id: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        items: cartItems,
-        shipping: shippingInformation,
-        payment: paymentDetails,
-        subtotal,
-        discountCode: discountCode || null,
+      const submittedOrder = await createBackendOrder({
+        cartItems,
+        paymentDetails,
+        shippingInformation,
+        discountCode,
         discountAmount,
-        total,
-        status: ORDER_STATUS.PENDING,
-        createdAt: Date.now(),
-      };
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      deductStock(cartItems);
-
-      // Simulate successful order creation
-      const submittedOrder = {
-        ...order,
-        status: ORDER_STATUS.PROCESSING,
-      };
+        shippingFee,
+      });
 
       setOrderId(submittedOrder.id);
       setOrderComplete(true);
@@ -161,7 +214,7 @@ export default function OrderSubmissionProcessor({
       if (onSubmitSuccess) {
         onSubmitSuccess(submittedOrder);
       }
-    } catch (error) {
+    } catch {
       setSubmitError(ERROR_MESSAGES.ORDER_SUBMISSION_ERROR);
       setIsSubmitting(false);
     }

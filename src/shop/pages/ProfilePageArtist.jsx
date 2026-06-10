@@ -23,12 +23,34 @@ const buildArtistProfile = (profile, fallbackArtist, fallbackUser) => ({
   bio: profile?.bio || fallbackArtist?.bio || "",
 });
 
+const getId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value._id || value.id || "";
+};
+
+const getOrderDate = (order) => order.created_at || order.createdAt || order.purchaseDate;
+
+const getOrderBuyer = (order) => {
+  const buyer = order.user_id;
+  if (buyer && typeof buyer === "object") return buyer;
+  return users.find((u) => u._id === buyer) || { _id: buyer, display_name: buyer, username: buyer, email: "" };
+};
+
+const getItemArtistId = (item) => getId(item.artist_id);
+
+const getItemProductId = (item) => getId(item.product_id);
+
+const getItemProductType = (item) => item.product_type || item.product_id?.type || products.find((p) => p._id === getItemProductId(item))?.type || "unknown";
+
 export default function ProfilePageArtist() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, authLoading } = useAuth();
   const mockArtist = artists.find((artist) => artist.user_id === user?._id) || artists[0];
   const [artistProfile, setArtistProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [fetchedProducts, setFetchedProducts] = useState(null);
+  const [dashboardOrders, setDashboardOrders] = useState(null);
+  const [ordersError, setOrdersError] = useState("");
   const [followers, setFollowers] = useState(null);
   const [followersLoading, setFollowersLoading] = useState(true);
   const currentArtist = artistProfile || buildArtistProfile(null, mockArtist, user);
@@ -100,9 +122,25 @@ export default function ProfilePageArtist() {
       }
     };
 
+    const loadOrders = async () => {
+      try {
+        const response = await apiGet("/orders");
+        if (!cancelled) {
+          setDashboardOrders(response.data || []);
+          setOrdersError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDashboardOrders([]);
+          setOrdersError(error.message || "Unable to load orders.");
+        }
+      }
+    };
+
     if (isLoggedIn && user?.role === "artist") {
       loadArtistProfile();
       loadFollowers();
+      loadOrders();
     }
 
     return () => {
@@ -110,6 +148,7 @@ export default function ProfilePageArtist() {
     };
   }, [isLoggedIn, mockArtist, user]);
 
+  if (authLoading) return <ArtistStudioSkeleton />;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (user?.role !== "artist") return <Navigate to="/profile" replace />;
   if (profileLoading && !artistProfile) return <ArtistStudioSkeleton />;
@@ -296,10 +335,11 @@ export default function ProfilePageArtist() {
                   value={profileForm.bio}
                   onChange={(e) => updateProfileField("bio", e.target.value)}
                   placeholder="Bio"
-                  maxLength={250}
+                  maxLength={500}
                   rows={3}
                   className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[14px] text-white/85 outline-none focus:border-white/30"
                 />
+                <p className="mt-1 text-[11px] text-white/30">{profileForm.bio.length}/500</p>
               </form>
             ) : (
               <>
@@ -414,11 +454,13 @@ export default function ProfilePageArtist() {
           {activeTab === "overview" ? (
             <ArtistOverview
               artist={currentArtist}
+              orders={dashboardOrders}
+              ordersError={ordersError}
               onShowFans={() => setActiveTab("fans")}
               onShowOrders={() => setActiveTab("orders")}
             />
           ) : activeTab === "orders" ? (
-            <OrdersList artistId={currentArtist?._id} />
+            <OrdersList artistId={currentArtist?._id} orders={dashboardOrders} ordersError={ordersError} />
           ) : activeTab === "fans" ? (
             <FansList artistId={currentArtist?._id} followers={followers} followersLoading={followersLoading} />
           ) : (
@@ -512,7 +554,7 @@ function ProductGrid({ products }) {
               <div className="mt-1 flex items-center justify-between gap-2">
                 <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
                 <Link to={`/products/${product._id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/60 no-underline hover:border-white/30 hover:text-white">
-                  Manage
+                  Edit
                 </Link>
               </div>
             </div>
@@ -525,7 +567,7 @@ function ProductGrid({ products }) {
 
 const PLATFORM_FEE = 0.10;
 
-function ArtistOverview({ artist, onShowFans, onShowOrders }) {
+function ArtistOverview({ artist, orders: dashboardOrders, ordersError, onShowFans, onShowOrders }) {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [timeRange, setTimeRange] = useState("30");
@@ -534,29 +576,31 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
   const now = new Date();
   const cutoff = new Date(now.getTime() - Number(timeRange) * 24 * 60 * 60 * 1000);
 
-  const allArtistOrders = orders.filter((o) =>
-    o.items.some((i) => i.artist_id === artistId),
+  const sourceOrders = dashboardOrders ?? orders;
+  const allArtistOrders = sourceOrders.filter((o) =>
+    o.items.some((i) => getItemArtistId(i) === artistId),
   );
-  const artistOrders = allArtistOrders.filter((o) => new Date(o.created_at) >= cutoff);
+  const artistOrders = allArtistOrders.filter((o) => new Date(getOrderDate(o)) >= cutoff);
 
   const totalRevenue = artistOrders.reduce((sum, o) =>
-    sum + o.items.filter((i) => i.artist_id === artistId)
+    sum + o.items.filter((i) => getItemArtistId(i) === artistId)
       .reduce((s, i) => s + i.unit_price * (i.quantity || 1), 0), 0);
 
   const fanMap = {};
   artistOrders.forEach((o) => {
-    const items = o.items.filter((i) => i.artist_id === artistId);
+    const items = o.items.filter((i) => getItemArtistId(i) === artistId);
     if (!items.length) return;
-    fanMap[o.user_id] = fanMap[o.user_id] || { purchases: 0, lastPurchase: null };
-    fanMap[o.user_id].purchases += items.reduce((s, i) => s + (i.quantity || 1), 0);
-    const d = new Date(o.created_at);
-    if (!fanMap[o.user_id].lastPurchase || d > fanMap[o.user_id].lastPurchase)
-      fanMap[o.user_id].lastPurchase = d;
+    const buyerId = getId(o.user_id);
+    fanMap[buyerId] = fanMap[buyerId] || { user: getOrderBuyer(o), purchases: 0, lastPurchase: null };
+    fanMap[buyerId].purchases += items.reduce((s, i) => s + (i.quantity || 1), 0);
+    const d = new Date(getOrderDate(o));
+    if (!fanMap[buyerId].lastPurchase || d > fanMap[buyerId].lastPurchase)
+      fanMap[buyerId].lastPurchase = d;
   });
 
   const fanEntries = Object.keys(fanMap)
     .map((uid) => {
-      const u = users.find((x) => x._id === uid) || { display_name: uid, email: "" };
+      const u = fanMap[uid].user || users.find((x) => x._id === uid) || { display_name: uid, email: "" };
       return { user: u, purchases: fanMap[uid].purchases, lastPurchase: fanMap[uid].lastPurchase };
     })
     .sort((a, b) => b.purchases - a.purchases);
@@ -580,8 +624,8 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
     const t = i / (chartLength - 1);
     const pointDate = new Date(cutoff.getTime() + t * rangeMs);
     return artistOrders
-      .filter((o) => Math.abs(new Date(o.created_at) - pointDate) < windowMs)
-      .reduce((s, o) => s + o.items.filter((i) => i.artist_id === artistId)
+      .filter((o) => Math.abs(new Date(getOrderDate(o)) - pointDate) < windowMs)
+      .reduce((s, o) => s + o.items.filter((i) => getItemArtistId(i) === artistId)
         .reduce((si, i) => si + i.unit_price * (i.quantity || 1), 0), 0);
   });
   const maxChartValue = Math.max(...chartValues, 1);
@@ -592,11 +636,11 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
 
   const orderMix = artistOrders.reduce((mix, o) => {
     o.items.forEach((i) => {
-      if (i.artist_id !== artistId) return;
+      if (getItemArtistId(i) !== artistId) return;
       const rev = i.unit_price * (i.quantity || 1);
-      const p = products.find((p) => p._id === i.product_id);
-      if (p?.type === "merch") mix.merch += rev;
-      else if (p?.type === "single" || p?.type === "album") mix.digital += rev;
+      const type = getItemProductType(i);
+      if (type === "merch") mix.merch += rev;
+      else if (type === "single" || type === "album") mix.digital += rev;
       else mix.bundle += rev;
     });
     return mix;
@@ -658,6 +702,12 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
           </button>
         </div>
       </div>
+
+      {ordersError && (
+        <div className="rounded-lg border border-[#fc3c44]/25 bg-[#fc3c44]/10 px-4 py-3 text-[13px] text-[#ff9a9e]">
+          {ordersError}
+        </div>
+      )}
 
       {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Stat cards 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="grid grid-cols-4 gap-3">
@@ -762,11 +812,11 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
           </div>
           <div className="space-y-1">
             {artistOrders.slice(0, 5).map((order) => {
-              const myItems = order.items.filter((i) => i.artist_id === artistId);
+              const myItems = order.items.filter((i) => getItemArtistId(i) === artistId);
               const amount = myItems.reduce((s, i) => s + i.unit_price * (i.quantity || 1), 0);
               const firstTitle = myItems[0]?.title_snapshot ?? "Untitled";
               const extra = myItems.length > 1 ? ` +${myItems.length - 1}` : "";
-              const buyer = users.find((u) => u._id === order.user_id);
+              const buyer = getOrderBuyer(order);
               const buyerName = buyer?.display_name || buyer?.username || "Unknown";
               return (
                 <div key={order._id} className="flex items-center justify-between py-2.5 rounded-xl px-3 hover:bg-white/[0.03] transition-colors group">
@@ -947,12 +997,21 @@ const MERCH_STATUSES = [
   { value: "delivered", label: "Delivered", color: "#4ade80" },
 ];
 
-function OrdersList({ artistId }) {
+function OrdersList({ artistId, orders: dashboardOrders, ordersError }) {
   const { getStatus, setStatus } = useFulfillment();
+  const sourceOrders = dashboardOrders ?? orders;
 
-  const artistOrders = orders
-    .filter((o) => o.items.some((i) => i.artist_id === artistId))
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const artistOrders = sourceOrders
+    .filter((o) => o.items.some((i) => getItemArtistId(i) === artistId))
+    .sort((a, b) => new Date(getOrderDate(b)) - new Date(getOrderDate(a)));
+
+  if (ordersError) {
+    return (
+      <div className="rounded-lg border border-[#fc3c44]/25 bg-[#fc3c44]/10 px-4 py-3 text-[13px] text-[#ff9a9e]">
+        {ordersError}
+      </div>
+    );
+  }
 
   if (artistOrders.length === 0) {
     return <div className="py-12 text-white/35 text-[14px]">No orders yet.</div>;
@@ -963,7 +1022,7 @@ function OrdersList({ artistId }) {
 
   const deriveOrderStatus = (order, myItems) => {
     const statuses = myItems.map((item) =>
-      getItemStatus(order._id, item.product_id, item.fulfillment_status)
+      getItemStatus(order._id, getItemProductId(item), item.fulfillment_status || (getItemProductType(item) === "merch" ? "pending" : "digital_delivered"))
     );
     const allDone = statuses.every((s) => s === "delivered" || s === "digital_delivered");
     const anyShipped = statuses.some((s) => s === "shipped" || s === "delivered" || s === "digital_delivered");
@@ -977,13 +1036,14 @@ function OrdersList({ artistId }) {
   return (
     <div className="space-y-3">
       {artistOrders.map((order) => {
-        const myItems = order.items.filter((i) => i.artist_id === artistId);
+        const myItems = order.items.filter((i) => getItemArtistId(i) === artistId);
         const gross = myItems.reduce((s, i) => s + i.unit_price * (i.quantity || 1), 0);
         const net = Math.round(gross * (1 - PLATFORM_FEE));
-        const buyer = users.find((u) => u._id === order.user_id);
+        const buyer = getOrderBuyer(order);
         const buyerName = buyer?.display_name || buyer?.username || order.user_id;
         const derivedStatus = deriveOrderStatus(order, myItems);
         const statusCfg = ORDER_STATUS[derivedStatus] ?? ORDER_STATUS.pending;
+        const orderDate = getOrderDate(order);
 
         return (
           <div key={order._id} className="rounded-xl border border-white/[0.08] bg-bg-card overflow-hidden">
@@ -997,7 +1057,7 @@ function OrdersList({ artistId }) {
                 <div>
                   <p className="text-[13px] font-semibold text-white">{buyerName}</p>
                   <p className="text-[11px] text-white/30">
-                    {order._id} 郢晢ｽｻ郢ｧ謇假ｽｽ・ｽ繝ｻ・ｷ {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    {order._id} / {new Date(orderDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
               </div>
@@ -1015,21 +1075,24 @@ function OrdersList({ artistId }) {
             {/* Items */}
             <div className="divide-y divide-white/[0.04]">
               {myItems.map((item, idx) => {
-                const p = products.find((p) => p._id === item.product_id);
-                const isMerch = p?.type === "merch";
-                const effectiveStatus = getItemStatus(order._id, item.product_id, item.fulfillment_status);
+                const productId = getItemProductId(item);
+                const p = item.product_id && typeof item.product_id === "object" ? item.product_id : products.find((p) => p._id === productId);
+                const productType = getItemProductType(item);
+                const coverUrl = item.cover_url_snapshot || p?.cover_url || p?.coverUrl?.url || p?.coverUrl;
+                const isMerch = productType === "merch";
+                const effectiveStatus = getItemStatus(order._id, productId, item.fulfillment_status || (isMerch ? "pending" : "digital_delivered"));
                 const fc = FULFILLMENT_STATUS[effectiveStatus] ?? { label: effectiveStatus, color: "#ffffff" };
 
                 return (
                   <div key={idx} className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      {p?.cover_url && (
-                        <img src={p.cover_url} alt={item.title_snapshot} className="w-9 h-9 rounded-md object-cover shrink-0 bg-bg" />
+                      {coverUrl && (
+                        <img src={coverUrl} alt={item.title_snapshot} className="w-9 h-9 rounded-md object-cover shrink-0 bg-bg" />
                       )}
                       <div className="min-w-0">
                         <p className="text-[13px] text-white/80 font-medium truncate">{item.title_snapshot}</p>
                         <p className="text-[11px] text-white/30 capitalize mt-0.5">
-                          {p?.type ?? "unknown"}{item.variant_id ? " / variant" : ""}
+                          {productType}{item.variant_id ? " / variant" : ""}
                         </p>
                       </div>
                     </div>
@@ -1037,7 +1100,7 @@ function OrdersList({ artistId }) {
                       {isMerch ? (
                         <select
                           value={effectiveStatus}
-                          onChange={(e) => setItemStatus(order._id, item.product_id, e.target.value)}
+                          onChange={(e) => setItemStatus(order._id, productId, e.target.value)}
                           className="rounded-full border px-3 py-1 text-[11px] font-semibold bg-bg outline-none cursor-pointer transition-colors"
                           style={{ color: fc.color, borderColor: `${fc.color}40`, backgroundColor: `${fc.color}12` }}
                         >

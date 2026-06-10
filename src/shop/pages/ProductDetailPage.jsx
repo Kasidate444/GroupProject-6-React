@@ -19,6 +19,8 @@ import {
 } from "../utils/productShape";
 import { getMerchWithLiveStock } from "../data/stockService.js";
 
+const MAX_CART_QUANTITY = 9999;
+
 export default function ProductDetailPage() {
   const { slug } = useParams();
   const { addToCart } = useCart();
@@ -113,9 +115,17 @@ export default function ProductDetailPage() {
   const livemerch = product.type === "merch" ? getMerchWithLiveStock(product._id) : null;
   const merchVariants = livemerch?.variants ?? (product.detail?.variants || []);
   const totalStock = merchVariants.reduce((s, v) => s + (v.stock_quantity || 0), 0);
+  const selectedVariantStock = selectedVariant?.stock_quantity ?? MAX_CART_QUANTITY;
+  const maxSelectableQty = Math.min(selectedVariantStock, MAX_CART_QUANTITY);
   const isMerchSoldOut = product.type === "merch" && totalStock === 0;
   const isSelectedVariantOutOfStock = product.type === "merch" && selectedVariant?.stock_quantity === 0;
   const addToCartDisabled = Boolean(priceError) || isMerchSoldOut || isSelectedVariantOutOfStock;
+
+  const handleSelectVariant = (variant) => {
+    if (variant.stock_quantity <= 0) return;
+    setSelectedVariant(variant);
+    setQty((value) => Math.min(value, Math.max(1, Math.min(variant.stock_quantity || 1, MAX_CART_QUANTITY))));
+  };
 
   const handleAddToCart = () => {
     if (product.name_your_price && customPrice < (product.min_price || 0)) {
@@ -209,7 +219,7 @@ export default function ProductDetailPage() {
                 <p className="text-[11px] uppercase tracking-widest text-white/35 mb-2">Choose option</p>
                 <div className="flex flex-wrap gap-2">
                   {merchVariants.map((variant) => (
-                    <button key={variant.variant_id} onClick={() => variant.stock_quantity > 0 && setSelectedVariant(variant)} disabled={variant.stock_quantity === 0} className={`px-4 py-2 rounded-lg border text-[13px] font-medium transition-all ${selectedVariant?.variant_id === variant.variant_id ? "bg-accent border-accent text-white" : variant.stock_quantity === 0 ? "bg-white/5 border-white/10 text-white/25 cursor-not-allowed line-through" : "bg-white/5 border-white/15 text-white/70 hover:border-white/30"}`}>
+                    <button key={variant.variant_id} onClick={() => handleSelectVariant(variant)} disabled={variant.stock_quantity === 0} className={`px-4 py-2 rounded-lg border text-[13px] font-medium transition-all ${selectedVariant?.variant_id === variant.variant_id ? "bg-accent border-accent text-white" : variant.stock_quantity === 0 ? "bg-white/5 border-white/10 text-white/25 cursor-not-allowed line-through" : "bg-white/5 border-white/15 text-white/70 hover:border-white/30"}`}>
                       {[variant.size, variant.color].filter(Boolean).join(" / ") || "One size"}
                       {variant.stock_quantity > 0 && variant.stock_quantity < 10 && <span className="ml-2 text-[10px] text-orange-400">only {variant.stock_quantity} left</span>}
                     </button>
@@ -247,8 +257,11 @@ export default function ProductDetailPage() {
                 <div className="flex items-center w-fit rounded-lg overflow-hidden border border-white/15 bg-white/5">
                   <button onClick={() => setQty((value) => Math.max(1, value - 1))} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">-</button>
                   <span className="w-10 text-center text-white/88 font-semibold text-[14px]">{qty}</span>
-                  <button onClick={() => setQty((value) => value + 1)} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold">+</button>
+                  <button onClick={() => setQty((value) => Math.min(maxSelectableQty, value + 1))} disabled={qty >= maxSelectableQty} className="w-10 h-10 flex items-center justify-center text-white/55 hover:text-white hover:bg-white/10 text-lg font-bold disabled:cursor-not-allowed disabled:opacity-35">+</button>
                 </div>
+                {maxSelectableQty < MAX_CART_QUANTITY && (
+                  <p className="mt-1.5 text-[11px] text-white/35">Max {maxSelectableQty} for this option</p>
+                )}
               </div>
             )}
 

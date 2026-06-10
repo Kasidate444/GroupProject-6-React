@@ -16,6 +16,8 @@ export const MERCH_TYPES = [
   { value: "other", label: "Other" },
 ];
 
+const MAX_STOCK_QUANTITY = 9999;
+
 export const validateMerchType = (type) => {
   if (!type) return "Type is required";
   const allowed = MERCH_TYPES.map((t) => t.value);
@@ -27,6 +29,7 @@ const validateNonNegativeInteger = (value, label) => {
   if (value === "" || value === null || value === undefined) return `${label} is required`;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) return `${label} must be a non-negative whole number`;
+  if (parsed > MAX_STOCK_QUANTITY) return `${label} cannot exceed ${MAX_STOCK_QUANTITY}`;
   return null;
 };
 
@@ -50,6 +53,7 @@ export const validateMerchForm = (form) => {
   if (!Array.isArray(form.variants) || form.variants.length === 0) {
     errors.variants = "Add at least one variant";
   } else {
+    const totalStock = form.variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
     const variantErrors = form.variants.map((variant, index) => {
       const row = {};
       const stockError = validateNonNegativeInteger(variant.stock, `Variant ${index + 1} stock`);
@@ -60,6 +64,8 @@ export const validateMerchForm = (form) => {
     if (variantErrors.some((row) => Object.keys(row).length > 0)) {
       errors.variantRows = variantErrors;
       errors.variants = "Fix variant stock values";
+    } else if (totalStock > MAX_STOCK_QUANTITY) {
+      errors.variants = `Total stock cannot exceed ${MAX_STOCK_QUANTITY}`;
     }
   }
 

@@ -20,6 +20,7 @@ const buildVariantPayload = (variants) => variants.map((variant, index) => ({
 }));
 
 const getTotalStock = (variants) => variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+const MAX_STOCK_QUANTITY = 9999;
 
 export default function UploadMerchForm({ onCancel, onSuccess }) {
   const [form, setForm] = useState({
@@ -297,6 +298,7 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
                       onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
                       placeholder="0"
                       min={0}
+                      max={MAX_STOCK_QUANTITY}
                       className={`w-full rounded-lg border bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30 ${rowError.stock ? "border-[#fc3c44]" : "border-white/10"}`}
                     />
                     {rowError.stock && <p className="mt-1 text-[11px] text-[#fc3c44]">{rowError.stock}</p>}

@@ -1,5 +1,7 @@
 import PropTypes from 'prop-types';
 
+const MAX_CART_QUANTITY = 9999;
+
 /**
  * QuantityEditor Component
  * 
@@ -34,6 +36,7 @@ export default function QuantityEditor({
   };
 
   const handleIncrement = () => {
+    if (currentQuantity >= MAX_CART_QUANTITY) return;
     onIncrement?.(itemId, currentQuantity + 1);
   };
 
@@ -52,7 +55,8 @@ export default function QuantityEditor({
       </span>
       <button
         onClick={handleIncrement}
-        className="px-3 py-2 text-white/60 hover:bg-white/10 transition-colors"
+        disabled={currentQuantity >= MAX_CART_QUANTITY}
+        className="px-3 py-2 text-white/60 hover:bg-white/10 transition-colors disabled:cursor-not-allowed disabled:opacity-35"
         aria-label={`Increase quantity for ${itemName}`}
         title="Increase quantity"
       >

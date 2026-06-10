@@ -15,7 +15,7 @@ import { getAllProductsWithArtist } from "../data/helpers";
 const PLATFORM_FEE_RATE = 0.10;
 
 export default function ProfilePageAdmin() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [timeRange, setTimeRange] = useState("30");
   const [bannerUrl, setBannerUrl] = useState(
@@ -28,7 +28,9 @@ export default function ProfilePageAdmin() {
   const bannerInputRef = useRef(null);
   const avatarInputRef = useRef(null);
 
+  if (authLoading) return <AdminPageSkeleton />;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (user?.role !== "admin") return <Navigate to="/profile" replace />;
 
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -141,6 +143,19 @@ export default function ProfilePageAdmin() {
           {activeTab === "artists" && <ArtistGrid />}
           {activeTab === "products" && <ProductGrid />}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-bg px-[5%] py-10 font-['Plus_Jakarta_Sans',sans-serif] text-white md:px-[10%]">
+      <div className="h-8 w-44 animate-pulse rounded bg-white/10" />
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-32 animate-pulse rounded-lg border border-white/10 bg-white/[0.04]" />
+        ))}
       </div>
     </div>
   );
@@ -965,7 +980,7 @@ function ProductGrid() {
                     {product.artist?.name || product.artist?.display_name || "Unknown"}
                   </p>
                   <Link to={`/products/${product._id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/60 no-underline hover:border-white/30 hover:text-white">
-                    Manage
+                    Edit
                   </Link>
                 </div>
               </div>

@@ -14,6 +14,8 @@ const MERCH_TYPES = [
   { value: "other", label: "Other" },
 ];
 
+const MAX_STOCK_QUANTITY = 9999;
+
 const createVariant = () => ({
   id: `variant-${Date.now()}-${Math.random().toString(16).slice(2)}`,
   variantId: "",
@@ -160,8 +162,9 @@ export default function EditProductPage() {
     if (product?.type === "merch") {
       for (const variant of form.variants) {
         const stock = Number(variant.stock);
-        if (!Number.isInteger(stock) || stock < 0) return "Variant stock must be a non-negative integer.";
+        if (!Number.isInteger(stock) || stock < 0 || stock > MAX_STOCK_QUANTITY) return `Variant stock must be a whole number between 0 and ${MAX_STOCK_QUANTITY}.`;
       }
+      if (totalStock > MAX_STOCK_QUANTITY) return `Total stock cannot exceed ${MAX_STOCK_QUANTITY}.`;
     }
     return "";
   };
@@ -374,7 +377,7 @@ function MerchFields({ form, totalStock, onFieldChange, onVariantChange, onAddVa
               <input value={variant.variantId} onChange={(e) => onVariantChange(variant.id, "variantId", e.target.value)} placeholder="Variant ID" className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30" />
               <input value={variant.size} onChange={(e) => onVariantChange(variant.id, "size", e.target.value)} placeholder="Size" className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30" />
               <input value={variant.color} onChange={(e) => onVariantChange(variant.id, "color", e.target.value)} placeholder="Color" className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30" />
-              <input type="number" min={0} value={variant.stock} onChange={(e) => onVariantChange(variant.id, "stock", e.target.value)} placeholder="Stock" className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30" />
+              <input type="number" min={0} max={MAX_STOCK_QUANTITY} value={variant.stock} onChange={(e) => onVariantChange(variant.id, "stock", e.target.value)} placeholder="Stock" className="rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30" />
               <button type="button" onClick={() => onRemoveVariant(variant.id)} className="rounded-md border border-white/10 px-3 py-2 text-[12px] text-white/55 hover:border-[#fc3c44]/40 hover:text-[#ff767b]">
                 Remove
               </button>
