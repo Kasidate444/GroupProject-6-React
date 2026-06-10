@@ -1,5 +1,5 @@
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
-import { getFirstPlayableTrack, getTrackAudioSrc } from "../../utils/productShape";
+import { canPreviewProduct } from "../../utils/productShape";
 
 export default function PlayButton({
   product,
@@ -10,9 +10,6 @@ export default function PlayButton({
   const { isProductPlaying, currentProduct, togglePlay, playProduct } =
     useAudioPlayer();
 
-  const canPlay = Boolean(getTrackAudioSrc(getFirstPlayableTrack(product)));
-  const isPlaying = isProductPlaying(product._id);
- 
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
