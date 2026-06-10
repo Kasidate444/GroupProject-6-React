@@ -16,6 +16,8 @@ import DiscountCodeInput from "../components/checkout/DiscountCodeInput.jsx";
 import OrderSummary from "../components/checkout/OrderSummary.jsx";
 import OrderSubmissionProcessor from "../components/checkout/OrderSubmissionProcessor.jsx";
 
+const MAX_CART_QUANTITY = 9999;
+
 export default function CheckoutPage() {
   const { items, clearCart } = useCart();
   const { addToCollection } = useCollection();
@@ -46,6 +48,7 @@ export default function CheckoutPage() {
         unitPrice: item.unit_price,
         quantity: item.type === "merch" ? item.quantity : 1,
         type: item.type === "merch" ? "merchandise" : "digital",
+        downloadTracks: item.download_tracks || [],
         isOutOfStock,
       };
     })
@@ -69,7 +72,7 @@ export default function CheckoutPage() {
 
   const handleQuantityChange = useCallback((itemId, newQuantity) => {
     setCartItems((prev) =>
-      prev.map((item) => item.id === itemId ? { ...item, quantity: item.type === "digital" ? 1 : newQuantity } : item)
+      prev.map((item) => item.id === itemId ? { ...item, quantity: item.type === "digital" ? 1 : Math.min(Math.max(newQuantity, 1), MAX_CART_QUANTITY) } : item)
     );
   }, []);
 

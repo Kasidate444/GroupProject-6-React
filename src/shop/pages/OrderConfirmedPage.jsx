@@ -1,12 +1,64 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Footer from "../../components/common/Footer";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle, Download, FileText } from "lucide-react";
+import { getProductTracks } from "../utils/productShape";
+
+const sanitizeFilename = (value) => (
+  String(value || "download")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .slice(0, 120)
+);
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const triggerAnchorDownload = (url, filename) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener noreferrer";
+  link.target = "_blank";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const triggerDownload = async (url, filename) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Unable to fetch audio file");
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    triggerAnchorDownload(objectUrl, filename);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    triggerAnchorDownload(url, filename);
+  }
+};
+
+const getProductId = (item) => item.productId || item.product_id || item.product?._id || item.product;
+
+const normalizeTrackDownloads = (tracks = [], fallbackTitle = "Track") => (
+  tracks
+    .map((track, index) => {
+      const url = track.audio_file_url || track.audio_url?.url || track.audioUrl?.url || null;
+      if (!url) return null;
+      return {
+        title: track.title || `${fallbackTitle} ${index + 1}`,
+        url,
+      };
+    })
+    .filter(Boolean)
+);
 
 export default function OrderConfirmedPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const orderData = location.state?.orderData;
+  const [downloadStatus, setDownloadStatus] = useState({});
 
   useEffect(() => {
     if (!orderData) {
@@ -33,6 +85,40 @@ export default function OrderConfirmedPage() {
 
   const hasDigitalItems = items.some((item) => item.type === "digital");
   const hasPhysicalItems = items.some((item) => item.type === "merchandise");
+
+  const setItemDownloadStatus = (itemId, nextStatus) => {
+    setDownloadStatus((prev) => ({ ...prev, [itemId]: nextStatus }));
+  };
+
+  const resolveDownloadTracks = async (item) => {
+    const embeddedTracks = normalizeTrackDownloads(item.downloadTracks || item.download_tracks || item.tracks, item.name);
+    if (embeddedTracks.length > 0) return embeddedTracks;
+
+    return normalizeTrackDownloads(getProductTracks(item.product), item.name);
+  };
+
+  const handleDownloadItem = async (item) => {
+    const itemKey = item.id || getProductId(item) || item.name;
+    setItemDownloadStatus(itemKey, { state: "loading", message: "Preparing download..." });
+
+    try {
+      const tracks = await resolveDownloadTracks(item);
+      if (tracks.length === 0) {
+        setItemDownloadStatus(itemKey, { state: "error", message: "No downloadable audio found for this item." });
+        return;
+      }
+
+      for (const [index, track] of tracks.entries()) {
+        const filename = `${sanitizeFilename(item.name)} - ${sanitizeFilename(track.title)}.mp3`;
+        await triggerDownload(track.url, filename);
+        if (index < tracks.length - 1) await wait(350);
+      }
+
+      setItemDownloadStatus(itemKey, { state: "success", message: `${tracks.length} download${tracks.length > 1 ? "s" : ""} started.` });
+    } catch (err) {
+      setItemDownloadStatus(itemKey, { state: "error", message: err.message || "Unable to start download." });
+    }
+  };
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("th-TH", {
@@ -123,16 +209,33 @@ export default function OrderConfirmedPage() {
                 <p className="text-sm text-white/40 leading-relaxed">Download links are also sent to your email.</p>
                 <div className="mt-8 pt-6 border-t border-white/8 space-y-6">
                   {items.filter((item) => item.type === "digital").map((item) => (
-                    <div key={item.id} className="flex flex-col gap-6">
+                    <div key={item.id} className="flex flex-col gap-4">
                       <p className="text-base font-semibold text-white mt-2">{item.name}</p>
                       <div className="flex flex-wrap gap-3">
-                        <button className="flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover transition-all">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadItem(item)}
+                          disabled={downloadStatus[item.id]?.state === "loading"}
+                          className="flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover transition-all disabled:cursor-wait disabled:opacity-60"
+                        >
                           <Download className="h-4 w-4" />Download all (MP3)
                         </button>
-                        <button className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 hover:bg-white/10 transition-all">
-                          <Download className="h-4 w-4" />Download all (FLAC)
+                        <button
+                          type="button"
+                          disabled
+                          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-white/25 cursor-not-allowed"
+                          title="FLAC files are not available for this order yet"
+                        >
+                          <Download className="h-4 w-4" />FLAC unavailable
                         </button>
                       </div>
+                      {downloadStatus[item.id]?.message && (
+                        <p className={`text-xs ${
+                          downloadStatus[item.id].state === "error" ? "text-[#fc3c44]" : "text-white/35"
+                        }`}>
+                          {downloadStatus[item.id].message}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

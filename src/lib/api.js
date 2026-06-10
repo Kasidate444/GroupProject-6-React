@@ -35,6 +35,10 @@ export const apiPatch = (path, body) => apiRequest(path, {
   body: JSON.stringify(body ?? {}),
 });
 
+export const apiDelete = (path) => apiRequest(path, {
+  method: "DELETE",
+});
+
 export const apiUpload = async (path, formData, method = "POST") => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,

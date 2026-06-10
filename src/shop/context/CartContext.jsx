@@ -1,13 +1,26 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from "react";
 import { FIXED_SHIPPING_THB } from "../data/constants";
+import { getProductTracks } from "../utils/productShape";
 
 export const CartContext = createContext(null);
 
 const isDigitalProduct = (type) => type === "single" || type === "album";
+const MAX_CART_QUANTITY = 9999;
 
 const getArtistNameSnapshot = (product) => (
   product.artist?.name || product.artist?.display_name || product.artist?.username || "Unknown"
+);
+
+const getDownloadTracks = (product) => (
+  getProductTracks(product)
+    .map((track, index) => ({
+      _id: track._id || `${product._id}-track-${index + 1}`,
+      title: track.title || product.title || `Track ${index + 1}`,
+      audio_file_url: track.audio_file_url || track.audio_url?.url || track.audioUrl?.url || null,
+      preview_url: track.preview_url || null,
+    }))
+    .filter((track) => track.audio_file_url)
 );
 
 export function CartProvider({ children }) {
@@ -17,14 +30,14 @@ export function CartProvider({ children }) {
   const addToCart = (product, options = {}) => {
     const { quantity = 1, unitPrice = product.price, variantId = null } = options;
     const digital = isDigitalProduct(product.type);
-    const nextQuantity = digital ? 1 : quantity;
+    const nextQuantity = digital ? 1 : Math.min(Math.max(Number(quantity) || 1, 1), MAX_CART_QUANTITY);
     const key = `${product._id}-${variantId || "none"}-${unitPrice}`;
 
     setItems((prev) => {
       const existing = prev.find((item) => item.key === key);
       if (existing) {
         return prev.map((item) => (
-          item.key === key ? { ...item, quantity: digital ? 1 : item.quantity + nextQuantity } : item
+          item.key === key ? { ...item, quantity: digital ? 1 : Math.min(item.quantity + nextQuantity, MAX_CART_QUANTITY) } : item
         ));
       }
 
@@ -41,6 +54,7 @@ export function CartProvider({ children }) {
           variant_id: variantId,
           cover_url: product.cover_url,
           type: product.type,
+          download_tracks: digital ? getDownloadTracks(product) : [],
         },
       ];
     });
@@ -58,7 +72,7 @@ export function CartProvider({ children }) {
     }
 
     setItems((prev) => prev.map((item) => (
-      item.key === key ? { ...item, quantity: isDigitalProduct(item.type) ? 1 : quantity } : item
+      item.key === key ? { ...item, quantity: isDigitalProduct(item.type) ? 1 : Math.min(quantity, MAX_CART_QUANTITY) } : item
     )));
   };
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { AuthProvider } from "./shop/context/AuthContext";
 import { FulfillmentProvider } from "./contexts/FulfillmentContext";
-import { Link, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import MiniPlayer from "./components/common/MiniPlayer";
 import CartDrawer from "./shop/components/cart/CartDrawer";
 import LandingPage from "./pages/LandingPage";
@@ -27,10 +27,12 @@ import LivePage from "./shop/pages/LivePage";
 import HelpPage from "./pages/HelpPage";
 import HelpArticlePage from "./pages/HelpArticlePage";
 import OrderConfirmedPage from "./shop/pages/OrderConfirmedPage";
+import EditProductPage from "./shop/pages/EditProductPage";
 import ProfileSetting from "./pages/profilesetting";
 import GiftCardsPage from "./pages/GiftCardsPage";
 import ClubPage from "./pages/ClubPage";
 import ClubDetailPage from "./pages/ClubDetailPage";
+import { useAuth } from "./hooks/useAuth";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -64,6 +66,24 @@ function NotFoundPage() {
   );
 }
 
+function RequireRole({ allowedRoles, children }) {
+  const { user, isLoggedIn, authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-bg px-[5%] py-10 text-white md:px-[10%]">
+        <div className="h-8 w-48 animate-pulse rounded bg-white/10" />
+        <div className="mt-6 h-64 animate-pulse rounded-lg border border-white/10 bg-white/[0.04]" />
+      </main>
+    );
+  }
+
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user?.role)) return <Navigate to="/profile" replace />;
+
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -90,9 +110,10 @@ export default function App() {
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/discover/:genres" element={<ShopPage />} />
             <Route path="/product/:slug" element={<ProductDetailPage />} />
+            <Route path="/products/:productId/edit" element={<EditProductPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/admin" element={<ProfilePageAdmin />} />
-            <Route path="/artist" element={<ProfilePageArtist />} />
+            <Route path="/admin" element={<RequireRole allowedRoles={["admin"]}><ProfilePageAdmin /></RequireRole>} />
+            <Route path="/artist" element={<RequireRole allowedRoles={["artist"]}><ProfilePageArtist /></RequireRole>} />
             <Route path="/order-confirmed" element={<OrderConfirmedPage />} />
             <Route path="/artist/:slug" element={<ArtistPage />} />
             <Route path="/profile" element={<ProfilePage />} />
