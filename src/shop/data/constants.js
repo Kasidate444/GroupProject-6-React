@@ -19,6 +19,7 @@ export const CATEGORIES = [
   { key: "poster", label: "Poster", icon: "▭" },
   { key: "snapback", label: "Snapback", icon: "⊓" },
   { key: "tote", label: "Tote bag", icon: "⊞" },
+  { key: "other", label: "Other", icon: "◈" },
 ];
 
 // Type icons สำหรับ product card badges

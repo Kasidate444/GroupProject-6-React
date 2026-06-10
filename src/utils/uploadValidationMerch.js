@@ -13,6 +13,7 @@ export const MERCH_TYPES = [
   { value: "poster", label: "Poster" },
   { value: "snapback", label: "Snapback" },
   { value: "tote", label: "Tote bag" },
+  { value: "other", label: "Other" },
 ];
 
 export const validateMerchType = (type) => {
