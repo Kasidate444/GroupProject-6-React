@@ -6,11 +6,9 @@ export default function PlayButton({
   contextQueue,
   size = "md",
   variant = "default",
-  preferFull = false,
 }) {
-  const { isProductPlaying, currentProduct, togglePlay, playProduct } = useAudioPlayer();
-  const canPlay = canPreviewProduct(product, preferFull);
-  const isPlaying = isProductPlaying(product?._id);
+  const { isProductPlaying, currentProduct, togglePlay, playProduct } =
+    useAudioPlayer();
 
   const canPlay = Boolean(getTrackAudioSrc(getFirstPlayableTrack(product)));
   const isPlaying = isProductPlaying(product._id);
@@ -20,10 +18,10 @@ export default function PlayButton({
     e.stopPropagation();
     if (!canPlay) return;
 
-    if (currentProduct?._id === product._id || currentProduct?._albumId === product._id) {
+    if (currentProduct?._id === product._id) {
       togglePlay();
     } else {
-      playProduct(product, contextQueue, { preferFull });
+      playProduct(product, contextQueue);
     }
   };
 
@@ -46,7 +44,7 @@ export default function PlayButton({
     <button
       onClick={handleClick}
       className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-full flex items-center justify-center transition-all`}
-      aria-label={isPlaying ? "Pause" : preferFull ? "Play" : "Play preview"}
+      aria-label={isPlaying ? "Pause" : "Play preview"}
     >
       {isPlaying ? (
         <svg width={iconSize[size]} height={iconSize[size]} viewBox="0 0 24 24" fill="currentColor">

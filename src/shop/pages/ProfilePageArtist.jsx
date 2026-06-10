@@ -5,8 +5,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { apiGet, apiUpload } from "../../lib/api";
 import { artists, orders, products, users } from "../data/mockDb";
 import { getProductsByArtist } from "../data/helpers";
-import { useAudioPlayer } from "../context/AudioPlayerContext";
-import PlayButton from "../components/audio/PlayButton";
 import UploadModal from "../../components/UploadModal";
 import UploadSingleForm from "../../components/UploadSingleForm";
 import UploadAlbumForm from "../../components/UploadAlbumForm";
@@ -28,11 +26,8 @@ export default function ProfilePageArtist() {
   const mockArtist = artists.find((artist) => artist.user_id === user?._id) || artists[0];
   const [artistProfile, setArtistProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [fetchedProducts, setFetchedProducts] = useState(null);
-  const [followers, setFollowers] = useState(null);
-  const [followersLoading, setFollowersLoading] = useState(true);
   const currentArtist = artistProfile || buildArtistProfile(null, mockArtist, user);
-  const artistProducts = fetchedProducts ?? getProductsByArtist(currentArtist?._id);
+  const artistProducts = getProductsByArtist(currentArtist?._id);
   const [activeTab, setActiveTab] = useState("overview");
   const [isSingleOpen, setIsSingleOpen] = useState(false);
   const [isAlbumOpen, setIsAlbumOpen] = useState(false);
@@ -68,9 +63,6 @@ export default function ProfilePageArtist() {
         setArtistProfile(nextArtist);
         setBannerUrl(nextArtist.banner_url);
         setAvatarUrl(nextArtist.avatar_url);
-        if (Array.isArray(profile?.artist_collection?.items)) {
-          setFetchedProducts(profile.artist_collection.items);
-        }
         setProfileForm({
           display_name: nextArtist.name || "",
           location: nextArtist.location || "",
@@ -88,21 +80,8 @@ export default function ProfilePageArtist() {
       }
     };
 
-    const loadFollowers = async () => {
-      setFollowersLoading(true);
-      try {
-        const response = await apiGet("/me/followers");
-        if (!cancelled) setFollowers(response.data || []);
-      } catch {
-        if (!cancelled) setFollowers([]);
-      } finally {
-        if (!cancelled) setFollowersLoading(false);
-      }
-    };
-
     if (isLoggedIn && user?.role === "artist") {
       loadArtistProfile();
-      loadFollowers();
     }
 
     return () => {
@@ -420,7 +399,7 @@ export default function ProfilePageArtist() {
           ) : activeTab === "orders" ? (
             <OrdersList artistId={currentArtist?._id} />
           ) : activeTab === "fans" ? (
-            <FansList artistId={currentArtist?._id} followers={followers} followersLoading={followersLoading} />
+            <FansList artistId={currentArtist?._id} />
           ) : (
             <ProductGrid products={filteredProducts} />
           )}
@@ -471,8 +450,6 @@ function ArtistStudioSkeleton() {
   );
 }
 function ProductGrid({ products }) {
-  const { isProductPlaying } = useAudioPlayer();
-
   if (products.length === 0) {
     return (
       <div className="py-12">
@@ -483,34 +460,24 @@ function ProductGrid({ products }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
-      {products.map((product) => {
-        const isPlaying = isProductPlaying(product._id);
-        const showPlayButton = product.type !== "merch";
-
-        return (
-          <Link key={product._id} to={`/product/${product.slug}`} className="flex flex-col gap-2 no-underline group">
-            <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
-              <img
-                src={product.cover_url}
-                alt={product.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
-              {showPlayButton && (
-                <div className={`absolute bottom-2 right-2 transition-opacity ${isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                  <PlayButton product={product} contextQueue={products} variant="overlay" preferFull />
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
-                {product.title}
-              </p>
-              <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
-            </div>
-          </Link>
-        );
-      })}
+      {products.map((product) => (
+        <Link key={product._id} to={`/product/${product.slug}`} className="flex flex-col gap-2 no-underline group">
+          <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
+            <img
+              src={product.cover_url}
+              alt={product.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          </div>
+          <div>
+            <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
+              {product.title}
+            </p>
+            <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -831,7 +798,7 @@ function ArtistOverview({ artist, onShowFans, onShowOrders }) {
   );
 }
 
-function FansList({ artistId, followers, followersLoading }) {
+function FansList({ artistId }) {
   const map = {};
   orders.forEach((o) => {
     const items = o.items.filter((i) => i.artist_id === artistId);
@@ -847,73 +814,32 @@ function FansList({ artistId, followers, followersLoading }) {
     return { user: u, purchases: map[uid].purchases, last: map[uid].last };
   });
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-[15px] font-semibold text-white mb-3">
-          Followers{followers ? ` (${followers.length})` : ""}
-        </h3>
-        {followersLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl border border-white/[0.06] bg-white/[0.04]" />
-            ))}
-          </div>
-        ) : !followers || followers.length === 0 ? (
-          <p className="text-white/35 text-[14px]">No followers yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {followers.map((f) => (
-              <div
-                key={f._id}
-                className="rounded-xl bg-bg-card border border-white/[0.08] px-4 py-3 flex items-center gap-3 hover:border-white/15 transition-colors"
-              >
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-white/[0.07] border border-white/10 flex items-center justify-center text-[13px] font-semibold text-white/50 shrink-0">
-                  {f.avatar_url ? (
-                    <img src={f.avatar_url} alt={f.display_name || f.username} className="w-full h-full object-cover" />
-                  ) : (
-                    (f.display_name || f.username || "?")[0].toUpperCase()
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-white truncate">{f.display_name || f.username}</p>
-                  <p className="text-[11px] text-white/35 truncate">@{f.username}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+  if (fanEntries.length === 0) {
+    return <div className="py-12 text-white/35 text-[14px]">No fans yet 鬩包ｽｯ繝ｻ・ｶ驛｢譎｢・ｽ・ｻno purchases found.</div>;
+  }
 
-      <div>
-        <h3 className="text-[15px] font-semibold text-white mb-3">Top buyers</h3>
-        {fanEntries.length === 0 ? (
-          <p className="text-white/35 text-[14px]">No purchases found.</p>
-        ) : (
-          <div className="space-y-2">
-            {fanEntries.map(({ user, purchases, last }) => (
-              <div
-                key={user._id}
-                className="rounded-xl bg-bg-card border border-white/[0.08] px-5 py-4 flex items-center justify-between hover:border-white/15 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-white/[0.07] border border-white/10 flex items-center justify-center text-[13px] font-semibold text-white/50">
-                    {(user.display_name || user.username || "?")[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-medium text-white">{user.display_name || user.username}</p>
-                    <p className="text-[12px] text-white/35">{user.email}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[14px] font-semibold text-white">{purchases} purchases</p>
-                  <p className="text-[12px] text-white/30">Last: {last?.toLocaleDateString()}</p>
-                </div>
-              </div>
-            ))}
+  return (
+    <div className="space-y-2">
+      {fanEntries.map(({ user, purchases, last }) => (
+        <div
+          key={user._id}
+          className="rounded-xl bg-bg-card border border-white/[0.08] px-5 py-4 flex items-center justify-between hover:border-white/15 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-white/[0.07] border border-white/10 flex items-center justify-center text-[13px] font-semibold text-white/50">
+              {(user.display_name || user.username || "?")[0].toUpperCase()}
+            </div>
+            <div>
+              <p className="text-[14px] font-medium text-white">{user.display_name || user.username}</p>
+              <p className="text-[12px] text-white/35">{user.email}</p>
+            </div>
           </div>
-        )}
-      </div>
+          <div className="text-right">
+            <p className="text-[14px] font-semibold text-white">{purchases} purchases</p>
+            <p className="text-[12px] text-white/30">Last: {last?.toLocaleDateString()}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
