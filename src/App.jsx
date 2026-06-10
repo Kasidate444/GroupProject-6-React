@@ -27,6 +27,8 @@ import LivePage from "./shop/pages/LivePage";
 import HelpPage from "./pages/HelpPage";
 import HelpArticlePage from "./pages/HelpArticlePage";
 import OrderConfirmedPage from "./shop/pages/OrderConfirmedPage";
+import OrderDetailPage from "./shop/pages/OrderDetailPage";
+import OrderHistoryPage from "./shop/pages/OrderHistoryPage";
 import EditProductPage from "./shop/pages/EditProductPage";
 import ProfileSetting from "./pages/profilesetting";
 import GiftCardsPage from "./pages/GiftCardsPage";
@@ -115,6 +117,8 @@ export default function App() {
             <Route path="/admin" element={<RequireRole allowedRoles={["admin"]}><ProfilePageAdmin /></RequireRole>} />
             <Route path="/artist" element={<RequireRole allowedRoles={["artist"]}><ProfilePageArtist /></RequireRole>} />
             <Route path="/order-confirmed" element={<OrderConfirmedPage />} />
+            <Route path="/orders" element={<OrderHistoryPage />} />
+            <Route path="/orders/:orderId" element={<OrderDetailPage />} />
             <Route path="/artist/:slug" element={<ArtistPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/live/:id" element={<LivePage />} />
