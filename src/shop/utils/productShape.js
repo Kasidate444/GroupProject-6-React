@@ -20,7 +20,10 @@ export const getProductTracks = (product) => {
 };
 
 export const getFirstPlayableTrack = (product) => {
-  return getProductTracks(product).find(isTrackLike) || null;
+  if (!product) return null;
+  // product is itself a raw track object (e.g. album tracklist item)
+  if (product.preview_url || product.audio_file_url || product.audio_url?.url) return product;
+  return getProductTracks(product).find((track) => track?.preview_url || track?.audio_file_url || track?.audio_url?.url) || null;
 };
 
 export const getTrackAudioSrc = (track) => {
