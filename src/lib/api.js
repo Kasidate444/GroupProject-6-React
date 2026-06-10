@@ -14,6 +14,9 @@ export const apiRequest = async (path, options = {}) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 401 && data.code === "TOKEN_EXPIRED") {
+      window.dispatchEvent(new CustomEvent("auth:session-expired"));
+    }
     throw new Error(data.message || data.error || "Request failed");
   }
 
@@ -42,6 +45,9 @@ export const apiUpload = async (path, formData, method = "POST") => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 401 && data.code === "TOKEN_EXPIRED") {
+      window.dispatchEvent(new CustomEvent("auth:session-expired"));
+    }
     throw new Error(data.message || data.error || "Upload failed");
   }
 
