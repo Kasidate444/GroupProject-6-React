@@ -18,8 +18,8 @@ function ItemRow({ items, hidden = false }) {
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </div>
           <div className="flex flex-col gap-0.5 p-3">
-            <p className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-semibold leading-tight text-white">{item.title}</p>
-            <p className="text-[11px] text-white/40">{getArtistName(item)}</p>
+            <p className="truncate font-['Plus_Jakarta_Sans',sans-serif] text-sm font-semibold leading-tight text-white">{item.title}</p>
+            <p className="truncate text-[11px] text-white/40">{getArtistName(item)}</p>
             <p className="mt-2 text-sm font-bold text-white">{formatPrice(item.price)}</p>
           </div>
         </Link>

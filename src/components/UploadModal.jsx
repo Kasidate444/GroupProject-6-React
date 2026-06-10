@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // =============================================================================
 // UPLOAD MODAL — Modal wrapper กลาง (ใช้ซ้ำได้ Single/Album/Merch)
@@ -21,7 +21,12 @@ export default function UploadModal({
   width = 600,
   children,
   footer,
+  closeOnOverlayClick = true,
 }) {
+  // ปิด modal เฉพาะตอนที่ mousedown และ click เกิดขึ้นบน overlay จริง ๆ
+  // (กันกรณีลากเลือกข้อความใน input/textarea แล้วปล่อยเมาส์นอกกรอบ ทำให้ modal ปิดและข้อมูลหาย)
+  const mouseDownOnOverlay = useRef(false);
+
   // ── กด Esc เพื่อปิด ──
   useEffect(() => {
     if (!isOpen) return;
@@ -39,10 +44,22 @@ export default function UploadModal({
 
   if (!isOpen) return null;
 
+  const handleOverlayMouseDown = (e) => {
+    mouseDownOnOverlay.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (closeOnOverlayClick && e.target === e.currentTarget && mouseDownOnOverlay.current) {
+      onClose();
+    }
+    mouseDownOnOverlay.current = false;
+  };
+
   return (
     // Overlay
     <div
-      onClick={onClose}
+      onMouseDown={handleOverlayMouseDown}
+      onClick={handleOverlayClick}
       className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
     >
       {/* Modal box — กดในนี้ไม่ปิด */}

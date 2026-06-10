@@ -12,7 +12,6 @@ export default function FanRegisterPage() {
       onGoArtist={() => navigate("/register/artist")}
       onRegister={async (formData) => {
         await register({ ...formData, role: "fan" });
-        navigate("/login");
       }}
     />
   );

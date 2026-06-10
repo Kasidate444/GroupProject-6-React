@@ -427,13 +427,13 @@ export default function ProfilePageArtist() {
         </div>
       </div>
 
-      <UploadModal isOpen={isSingleOpen} onClose={() => setIsSingleOpen(false)} title="Upload Single" icon={"\u266A"}>
+      <UploadModal isOpen={isSingleOpen} onClose={() => setIsSingleOpen(false)} title="Upload Single" icon={"\u266A"} closeOnOverlayClick={false}>
         <UploadSingleForm onCancel={() => setIsSingleOpen(false)} onSuccess={() => setIsSingleOpen(false)} />
       </UploadModal>
-      <UploadModal isOpen={isAlbumOpen} onClose={() => setIsAlbumOpen(false)} title="Upload Album" icon={"\u25D0"} width={640}>
+      <UploadModal isOpen={isAlbumOpen} onClose={() => setIsAlbumOpen(false)} title="Upload Album" icon={"\u25D0"} width={640} closeOnOverlayClick={false}>
         <UploadAlbumForm onCancel={() => setIsAlbumOpen(false)} onSuccess={() => setIsAlbumOpen(false)} />
       </UploadModal>
-      <UploadModal isOpen={isMerchOpen} onClose={() => setIsMerchOpen(false)} title="Upload Merch" icon={"\u2726"} width={680}>
+      <UploadModal isOpen={isMerchOpen} onClose={() => setIsMerchOpen(false)} title="Upload Merch" icon={"\u2726"} width={680} closeOnOverlayClick={false}>
         <UploadMerchForm onCancel={() => setIsMerchOpen(false)} onSuccess={() => setIsMerchOpen(false)} />
       </UploadModal>
     </div>
