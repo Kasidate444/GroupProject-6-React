@@ -34,6 +34,47 @@ h4 {
   margin: 0;
 }
 
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes modal-spring {
+  0%   { transform: scale(0.88) translateY(28px); opacity: 0; }
+  55%  { transform: scale(1.04) translateY(-6px); opacity: 1; }
+  78%  { transform: scale(0.99) translateY(3px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes modal-exit {
+  from { transform: scale(1) translateY(0); opacity: 1; }
+  to   { transform: scale(0.96) translateY(14px); opacity: 0; }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes backdrop-out {
+  to { opacity: 0; }
+}
+
+@keyframes stagger-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@theme {
+  --animate-modal-spring: modal-spring 0.52s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  --animate-modal-exit: modal-exit 0.25s ease-in forwards;
+  --animate-backdrop-in: backdrop-in 0.3s ease forwards;
+  --animate-backdrop-out: backdrop-out 0.25s ease forwards;
+  --animate-stagger-up: stagger-up 0.45s ease both;
+}
+
 @keyframes music-burst {
   0%   { transform: translate(0, 0) scale(1.5) rotate(0deg); opacity: 1; }
   60%  { opacity: 1; }
