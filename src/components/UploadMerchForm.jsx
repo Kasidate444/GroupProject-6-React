@@ -245,57 +245,81 @@ export default function UploadMerchForm({ onCancel, onSuccess }) {
           </button>
         </div>
 
-        <div className={`space-y-2 rounded-lg border p-3 ${errors.variants ? "border-[#fc3c44]" : "border-white/10"}`}>
+        <div className="space-y-2">
           {form.variants.map((variant, index) => {
             const rowError = errors.variantRows?.[index] || {};
             return (
-              <div key={variant.id} className="grid grid-cols-2 gap-2 md:grid-cols-[1fr_1fr_110px_1fr_auto]">
-                <input
-                  type="text"
-                  value={variant.size}
-                  onChange={(e) => updateVariant(variant.id, "size", e.target.value)}
-                  placeholder="Size"
-                  maxLength={40}
-                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
-                />
-                <input
-                  type="text"
-                  value={variant.color}
-                  onChange={(e) => updateVariant(variant.id, "color", e.target.value)}
-                  placeholder="Color"
-                  maxLength={40}
-                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
-                />
-                <input
-                  type="number"
-                  value={variant.stock}
-                  onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
-                  placeholder="Stock"
-                  min={0}
-                  className={`rounded-lg border bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30 ${rowError.stock ? "border-[#fc3c44]" : "border-white/10"}`}
-                />
-                <input
-                  type="text"
-                  value={variant.sku}
-                  onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                  placeholder="SKU"
-                  maxLength={80}
-                  className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeVariant(variant.id)}
-                  disabled={form.variants.length === 1}
-                  className="rounded-lg border border-white/10 px-3 py-2 text-[12px] text-white/50 transition-colors hover:border-[#fc3c44]/50 hover:text-[#fc3c44] disabled:cursor-not-allowed disabled:opacity-35 md:w-20"
-                >
-                  Remove
-                </button>
-                {rowError.stock && <p className="col-span-2 text-[11px] text-[#fc3c44] md:col-span-5">{rowError.stock}</p>}
+              <div key={variant.id} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-white/35">
+                    Variant {index + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(variant.id)}
+                    disabled={form.variants.length === 1}
+                    className="flex h-5 w-5 items-center justify-center rounded text-white/30 transition-all hover:bg-[#fc3c44]/10 hover:text-[#fc3c44] disabled:cursor-not-allowed disabled:opacity-25"
+                    aria-label="Remove variant"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/35">Size</label>
+                    <input
+                      type="text"
+                      value={variant.size}
+                      onChange={(e) => updateVariant(variant.id, "size", e.target.value)}
+                      placeholder="e.g. M"
+                      maxLength={40}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/35">Color</label>
+                    <input
+                      type="text"
+                      value={variant.color}
+                      onChange={(e) => updateVariant(variant.id, "color", e.target.value)}
+                      placeholder="e.g. Black"
+                      maxLength={40}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/35">Stock *</label>
+                    <input
+                      type="number"
+                      value={variant.stock}
+                      onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                      placeholder="0"
+                      min={0}
+                      className={`w-full rounded-lg border bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30 ${rowError.stock ? "border-[#fc3c44]" : "border-white/10"}`}
+                    />
+                    {rowError.stock && <p className="mt-1 text-[11px] text-[#fc3c44]">{rowError.stock}</p>}
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] text-white/35">
+                      SKU <span className="normal-case tracking-normal text-white/20">optional</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={variant.sku}
+                      onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
+                      placeholder="e.g. TS-M-BLK"
+                      maxLength={80}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[13px] text-white outline-none focus:border-white/30"
+                    />
+                  </div>
+                </div>
               </div>
             );
           })}
         </div>
-        {errors.variants && <p className="text-[11px] text-[#fc3c44] mt-1.5">{errors.variants}</p>}
+        {errors.variants && <p className="mt-1.5 text-[11px] text-[#fc3c44]">{errors.variants}</p>}
       </div>
 
       <div className="flex items-center justify-end gap-2.5 pt-2">
