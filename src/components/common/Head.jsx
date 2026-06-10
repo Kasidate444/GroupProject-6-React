@@ -80,7 +80,7 @@ export default function Head() {
             aria-label="Go to profile"
           >
             <span aria-hidden="true" className="text-lg">
-              ・滓ｫ・繝ｻ
+              🎧
             </span>
             <span className="sr-only">Fan headphone icon - Go to profile</span>
           </button>
