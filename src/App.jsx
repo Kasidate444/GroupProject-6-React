@@ -27,6 +27,7 @@ import LivePage from "./shop/pages/LivePage";
 import HelpPage from "./pages/HelpPage";
 import HelpArticlePage from "./pages/HelpArticlePage";
 import OrderConfirmedPage from "./shop/pages/OrderConfirmedPage";
+import EditProductPage from "./shop/pages/EditProductPage";
 import ProfileSetting from "./pages/profilesetting";
 import GiftCardsPage from "./pages/GiftCardsPage";
 import ClubPage from "./pages/ClubPage";
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/discover/:genres" element={<ShopPage />} />
             <Route path="/product/:slug" element={<ProductDetailPage />} />
+            <Route path="/products/:productId/edit" element={<EditProductPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/admin" element={<ProfilePageAdmin />} />
             <Route path="/artist" element={<ProfilePageArtist />} />

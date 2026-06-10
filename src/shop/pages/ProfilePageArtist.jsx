@@ -488,27 +488,35 @@ function ProductGrid({ products }) {
         const showPlayButton = product.type !== "merch";
 
         return (
-          <Link key={product._id} to={`/product/${product.slug}`} className="flex flex-col gap-2 no-underline group">
-            <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
+          <div key={product._id} className="flex flex-col gap-2 group">
+            <Link to={`/product/${product.slug}`} className="relative aspect-square w-full overflow-hidden rounded-lg bg-bg-card no-underline">
               <img
                 src={product.cover_url}
                 alt={product.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"
               />
+              <span className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-1 text-[10px] font-semibold uppercase text-white/70 backdrop-blur-sm">
+                {product.status || "published"}
+              </span>
               {showPlayButton && (
                 <div className={`absolute bottom-2 right-2 transition-opacity ${isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                   <PlayButton product={product} contextQueue={products} variant="overlay" preferFull />
                 </div>
               )}
-            </div>
+            </Link>
             <div>
-              <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
+              <Link to={`/product/${product.slug}`} className="block text-white/85 text-[13px] font-medium truncate no-underline group-hover:text-white transition-colors">
                 {product.title}
-              </p>
-              <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
+              </Link>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-white/35 text-[11px] capitalize">{product.type}</p>
+                <Link to={`/products/${product._id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/60 no-underline hover:border-white/30 hover:text-white">
+                  Manage
+                </Link>
+              </div>
             </div>
-          </Link>
+          </div>
         );
       })}
     </div>

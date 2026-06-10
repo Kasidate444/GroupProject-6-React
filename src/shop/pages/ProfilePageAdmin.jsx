@@ -1,14 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFulfillment } from "../../contexts/FulfillmentContext";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { apiGet } from "../../lib/api";
 import { ORDER_STATUS_LABELS } from "../data/constants";
 import {
   artists,
-  merch,
   orders,
   products,
-  tracks,
   users,
 } from "../data/mockDb";
 import { getAllProductsWithArtist } from "../data/helpers";
@@ -30,10 +29,6 @@ export default function ProfilePageAdmin() {
   const avatarInputRef = useRef(null);
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-
-  const publishedProducts = products.filter(
-    (product) => product.status === "published" && !product.deleted_at,
-  );
 
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -161,8 +156,6 @@ function AdminOverview({ timeRange, onTimeRangeChange, onViewOrders, onViewPayou
   const filteredOrders = orders.filter((o) => new Date(o.created_at) >= cutoff);
 
   const totalRevenue = filteredOrders.reduce((s, o) => s + o.total, 0);
-  const avgOrderValue = filteredOrders.length ? Math.round(totalRevenue / filteredOrders.length) : 0;
-  const ordersCount = filteredOrders.length;
 
   // Artist revenue map (filtered)
   const artistRevMap = {};
@@ -173,8 +166,6 @@ function AdminOverview({ timeRange, onTimeRangeChange, onViewOrders, onViewPayou
       artistRevMap[item.artist_id].revenue += item.unit_price * (item.quantity || 1);
     });
   });
-  const activeArtistCount = Object.keys(artistRevMap).length;
-
   const topArtists = artists
     .map((a) => ({
       name: a.name,
@@ -186,22 +177,6 @@ function AdminOverview({ timeRange, onTimeRangeChange, onViewOrders, onViewPayou
     .filter((a) => a.sales > 0)
     .sort((a, b) => b.revenueNum - a.revenueNum)
     .slice(0, 3);
-
-  // Order mix (filtered)
-  let digitalRev = 0, merchRev = 0, bundleRev = 0;
-  filteredOrders.forEach((order) => {
-    order.items.forEach((item) => {
-      const p = products.find((p) => p._id === item.product_id);
-      const rev = item.unit_price * (item.quantity || 1);
-      if (p?.type === "merch") merchRev += rev;
-      else if (p?.type === "single" || p?.type === "album") digitalRev += rev;
-      else bundleRev += rev;
-    });
-  });
-  const totalMix = digitalRev + merchRev + bundleRev || 1;
-  const digitalPct = Math.round((digitalRev / totalMix) * 100);
-  const merchPct = Math.round((merchRev / totalMix) * 100);
-  const bundlePct = 100 - digitalPct - merchPct;
 
   // Revenue chart (filtered, bucketed by time range)
   const chartLength = 25;
@@ -861,7 +836,35 @@ function ArtistGrid() {
 
 function ProductGrid() {
   const [productTab, setProductTab] = useState("tracks");
-  const productList = getAllProductsWithArtist();
+  const [managedProducts, setManagedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const fallbackProducts = getAllProductsWithArtist();
+  const productList = managedProducts.length > 0 ? managedProducts : fallbackProducts;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await apiGet("/products/manage");
+        if (!cancelled) setManagedProducts(response.data || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Unable to load products.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const trackProducts = productList.filter(
     (product) => product.type !== "merch",
   );
@@ -878,8 +881,8 @@ function ProductGrid() {
         ? merchProducts
         : moderationProducts;
   const productTabs = [
-    { key: "tracks", label: "Tracks", count: tracks.length },
-    { key: "merch", label: "Merch", count: merch.length },
+    { key: "tracks", label: "Tracks", count: trackProducts.length },
+    { key: "merch", label: "Merch", count: merchProducts.length },
     {
       key: "moderation",
       label: "Moderation",
@@ -911,27 +914,40 @@ function ProductGrid() {
         </div>
       </div>
 
-      {productTab === "moderation" && visibleProducts.length === 0 ? (
+      {error && (
+        <div className="rounded-lg border border-[#fc3c44]/25 bg-[#fc3c44]/10 px-4 py-3 text-[13px] text-[#ff9a9e]">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="aspect-square animate-pulse rounded-lg bg-white/[0.06]" />
+          ))}
+        </div>
+      )}
+
+      {!loading && productTab === "moderation" && visibleProducts.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-bg-card p-8 text-center">
           <p className="text-[16px] font-semibold text-white">Moderation queue is clear</p>
           <p className="mt-2 text-[13px] text-white/40">Drafts, hidden items, and deleted products will appear here.</p>
         </div>
-      ) : (
+      ) : !loading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
           {visibleProducts.map((product) => (
-            <Link
+            <div
               key={product._id}
-              to={`/product/${product.slug}`}
-              className="flex flex-col gap-2 no-underline group"
+              className="flex flex-col gap-2 group"
             >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card">
+              <Link to={`/product/${product.slug || product._id}`} className="aspect-square w-full overflow-hidden rounded-lg bg-bg-card no-underline">
                 <img
                   src={product.cover_url}
                   alt={product.title}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
                 />
-              </div>
+              </Link>
               <div>
                 <div className="mb-1 flex items-center gap-2">
                   <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-white/55">
@@ -941,14 +957,19 @@ function ProductGrid() {
                     {product.status}
                   </span>
                 </div>
-                <p className="text-white/85 text-[13px] font-medium truncate group-hover:text-white transition-colors">
+                <Link to={`/product/${product.slug || product._id}`} className="block text-white/85 text-[13px] font-medium truncate no-underline group-hover:text-white transition-colors">
                   {product.title}
-                </p>
-                <p className="text-white/40 text-[11px] truncate">
-                  {product.artist?.name || "Unknown"}
-                </p>
+                </Link>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-white/40 text-[11px] truncate">
+                    {product.artist?.name || product.artist?.display_name || "Unknown"}
+                  </p>
+                  <Link to={`/products/${product._id}/edit`} className="rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/60 no-underline hover:border-white/30 hover:text-white">
+                    Manage
+                  </Link>
+                </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
