@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import trackCover from "../assets/landing-page/cover3.png";
 import albumCover1 from "../assets/landing-page/album-cover-1.jpg";
@@ -162,7 +163,9 @@ export function AudioProvider({ children }) {
       if (introRef.current) {
         try {
           introRef.current.pause();
-        } catch (e) {}
+        } catch {
+          // Ignore cleanup errors from media APIs.
+        }
         introRef.current = null;
       }
       const a = new Audio(src);
@@ -181,8 +184,8 @@ export function AudioProvider({ children }) {
           setIntroPlaying(false);
         });
       introRef.current = a;
-    } catch (e) {
-      // ignore
+    } catch {
+      // Ignore browsers that block or fail audio construction.
     }
   };
 
@@ -190,7 +193,9 @@ export function AudioProvider({ children }) {
     if (introRef.current) {
       try {
         introRef.current.pause();
-      } catch (e) {}
+      } catch {
+        // Ignore cleanup errors from media APIs.
+      }
       introRef.current = null;
       setIntroPlaying(false);
     }

@@ -8,6 +8,7 @@ export default function ArticleModal({ article, isOpen, onClose }) {
       const t = setTimeout(() => setVisible(true), 10);
       return () => clearTimeout(t);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
     }
   }, [isOpen]);

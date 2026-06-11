@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { validateDiscountCodeFormat } from './validation.js';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.js';
+import { ERROR_MESSAGES } from './constants.js';
 
 /**
  * DiscountCodeInput component
@@ -76,7 +76,7 @@ export default function DiscountCodeInput({
       onApply(code, discount.type, discount.value);
       setInputValue('');
       setError('');
-    } catch (err) {
+    } catch {
       setError(ERROR_MESSAGES.ORDER_SUBMISSION_ERROR);
     } finally {
       setIsLoading(false);

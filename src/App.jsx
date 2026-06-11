@@ -24,6 +24,7 @@ import ProfilePage from "./shop/pages/ProfilePage";
 import ProfilePageAdmin from "./shop/pages/ProfilePageAdmin";
 import ProfilePageArtist from "./shop/pages/ProfilePageArtist";
 import LivePage from "./shop/pages/LivePage";
+import TestLivePage from "./shop/pages/TestLivePage";
 import HelpPage from "./pages/HelpPage";
 import HelpArticlePage from "./pages/HelpArticlePage";
 import OrderConfirmedPage from "./shop/pages/OrderConfirmedPage";
@@ -122,6 +123,7 @@ export default function App() {
             <Route path="/artist/:slug" element={<ArtistPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/live/:id" element={<LivePage />} />
+            <Route path="/test-live" element={<TestLivePage />} />
             <Route path="/profilesetting" element={<ProfileSetting />} />
           </Route>
         </Route>

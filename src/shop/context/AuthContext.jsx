@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../../lib/api";
@@ -64,9 +65,16 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     const restoreSession = async () => {
+      const storedSession = readStoredSession();
+
+      if (!storedSession?.token) {
+        setAuthLoading(false);
+        return;
+      }
+
       try {
         const response = await apiGet("/auth/me");
-        const session = { ...response.data, loggedIn: true };
+        const session = { ...response.data, token: storedSession.token, loggedIn: true };
 
         if (!cancelled) {
           localStorage.setItem("session", JSON.stringify(session));
@@ -93,7 +101,7 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     const response = await apiPost("/auth/login", { email, password });
-    const session = { ...response.user, loggedIn: true };
+    const session = { ...response.user, token: response.token, loggedIn: true };
 
     localStorage.setItem("session", JSON.stringify(session));
     setUser(session);
