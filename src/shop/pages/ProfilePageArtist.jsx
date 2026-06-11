@@ -11,6 +11,7 @@ import UploadModal from "../../components/UploadModal";
 import UploadSingleForm from "../../components/UploadSingleForm";
 import UploadAlbumForm from "../../components/UploadAlbumForm";
 import UploadMerchForm from "../../components/UploadMerchForm";
+import { ARTIST_GENRES } from "../../constants/genre.js";
 
 const buildArtistProfile = (profile, fallbackArtist, fallbackUser) => ({
   ...fallbackArtist,
@@ -21,6 +22,7 @@ const buildArtistProfile = (profile, fallbackArtist, fallbackUser) => ({
   avatar_url: profile?.profile_picture?.url || "",
   location: profile?.location || fallbackArtist?.location || "",
   bio: profile?.bio || fallbackArtist?.bio || "",
+  genre: profile?.genre || fallbackArtist?.genre || profile?.genres?.[0]?.name || "",
 });
 
 const getId = (value) => {
@@ -72,6 +74,7 @@ export default function ProfilePageArtist() {
     bio: "",
     profile_picture: null,
     banner_picture: null,
+    genre: "",
   });
   const [bannerUrl, setBannerUrl] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -99,6 +102,7 @@ export default function ProfilePageArtist() {
           display_name: nextArtist.name || "",
           location: nextArtist.location || "",
           bio: nextArtist.bio || "",
+          genre: nextArtist.genre || "",
           profile_picture: null,
           banner_picture: null,
         });
@@ -192,6 +196,7 @@ export default function ProfilePageArtist() {
       display_name: currentArtist?.name || "",
       location: currentArtist?.location || "",
       bio: currentArtist?.bio || "",
+      genre: currentArtist?.genre || "",
       profile_picture: null,
       banner_picture: null,
     });
@@ -206,6 +211,7 @@ export default function ProfilePageArtist() {
       display_name: currentArtist?.name || "",
       location: currentArtist?.location || "",
       bio: currentArtist?.bio || "",
+      genre: currentArtist?.genre || "",
       profile_picture: null,
       banner_picture: null,
     });
@@ -230,6 +236,7 @@ export default function ProfilePageArtist() {
       formData.append("bio", profileForm.bio.trim());
       if (profileForm.profile_picture) formData.append("profile_picture", profileForm.profile_picture);
       if (profileForm.banner_picture) formData.append("banner_picture", profileForm.banner_picture);
+      if (profileForm.genre) formData.append("genre", profileForm.genre.trim());
 
       const response = await apiUpload("/profile", formData, "PUT");
       const updated = response.data || response;
@@ -242,6 +249,7 @@ export default function ProfilePageArtist() {
         display_name: nextArtist.name || "",
         location: nextArtist.location || "",
         bio: nextArtist.bio || "",
+        genre: nextArtist.genre || "",
         profile_picture: null,
         banner_picture: null,
       });
@@ -355,6 +363,18 @@ export default function ProfilePageArtist() {
                   maxLength={120}
                   className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[14px] text-white/85 outline-none focus:border-white/30"
                 />
+                <select
+                  value={profileForm.genre}
+                  onChange={(e) => updateProfileField("genre", e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[14px] text-white/85 outline-none focus:border-white/30"
+                >
+                  <option value="" className="bg-bg-card text-white">Select genre</option>
+                  {ARTIST_GENRES.map((genre) => (
+                    <option key={genre} value={genre} className="bg-bg-card text-white">
+                      {genre}
+                    </option>
+                  ))}
+                </select>
                 <textarea
                   value={profileForm.bio}
                   onChange={(e) => updateProfileField("bio", e.target.value)}
@@ -371,6 +391,7 @@ export default function ProfilePageArtist() {
                   {currentArtist?.name || user?.display_name || user?.email}
                 </h1>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {currentArtist?.genre && <span className="text-accent text-[13px] font-semibold">{currentArtist.genre}</span>}
                   {currentArtist?.location && <span className="text-white/40 text-[13px]">{currentArtist.location}</span>}
                   {currentArtist?.bio && <span className="text-white/40 text-[13px]">{currentArtist.bio.slice(0, 90)}{currentArtist.bio.length > 90 ? "..." : ""}</span>}
                 </div>
@@ -428,7 +449,7 @@ export default function ProfilePageArtist() {
               >
                 <span className="flex items-center gap-2.5 pl-6 pr-4 py-3.5">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                   <span className="text-[14px] font-bold text-white tracking-wide">Upload new</span>
                 </span>
@@ -471,11 +492,10 @@ export default function ProfilePageArtist() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-3 text-[13px] font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab.key
-                  ? "border-accent text-white"
-                  : "border-transparent text-white/40 hover:text-white/65"
-              }`}
+              className={`px-5 py-3 text-[13px] font-medium transition-colors border-b-2 -mb-px ${activeTab === tab.key
+                ? "border-accent text-white"
+                : "border-transparent text-white/40 hover:text-white/65"
+                }`}
             >
               {tab.label}
             </button>
@@ -882,21 +902,21 @@ function ArtistOverview({ artist, orders: dashboardOrders, ordersError, onShowFa
           {fanEntries.length === 0 ? (
             <p className="text-[13px] text-white/25 pt-2">No fans yet.</p>
           ) : (
-          <div className="space-y-1">
-            {fanEntries.slice(0, 5).map(({ user, purchases, lastPurchase }, i) => (
-              <div key={user._id} className="flex items-center gap-2.5 py-2.5 px-3 rounded-xl hover:bg-white/[0.03] transition-colors">
-                <span className={`text-[10px] w-3 shrink-0 tabular-nums font-bold ${i === 0 ? "text-brand-gold" : "text-white/20"}`}>{i + 1}</span>
-                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 ${i === 0 ? "bg-brand-gold/10 border-brand-gold/30 text-brand-gold" : "bg-white/[0.07] border-white/10 text-white/45"}`}>
-                  {(user.display_name || user.username || "?")[0].toUpperCase()}
+            <div className="space-y-1">
+              {fanEntries.slice(0, 5).map(({ user, purchases, lastPurchase }, i) => (
+                <div key={user._id} className="flex items-center gap-2.5 py-2.5 px-3 rounded-xl hover:bg-white/[0.03] transition-colors">
+                  <span className={`text-[10px] w-3 shrink-0 tabular-nums font-bold ${i === 0 ? "text-brand-gold" : "text-white/20"}`}>{i + 1}</span>
+                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 ${i === 0 ? "bg-brand-gold/10 border-brand-gold/30 text-brand-gold" : "bg-white/[0.07] border-white/10 text-white/45"}`}>
+                    {(user.display_name || user.username || "?")[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium text-white/80 truncate">{user.display_name || user.username}</p>
+                    <p className="text-[10px] text-white/30">{lastPurchase?.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>
+                  </div>
+                  <p className="text-[12px] font-semibold text-white tabular-nums shrink-0">{purchases}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-medium text-white/80 truncate">{user.display_name || user.username}</p>
-                  <p className="text-[10px] text-white/30">{lastPurchase?.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>
-                </div>
-                <p className="text-[12px] font-semibold text-white tabular-nums shrink-0">{purchases}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -1010,22 +1030,22 @@ function FansList({ artistId, followers, followersLoading }) {
 
 const FULFILLMENT_STATUS = {
   digital_delivered: { label: "Delivered", color: "#4ade80" },
-  shipped:           { label: "Shipped",   color: "#00d9ff" },
-  pending:           { label: "Pending",   color: "#ffd700" },
-  processing:        { label: "Processing",color: "#fb923c" },
-  cancelled:         { label: "Cancelled", color: "#fc3c44" },
+  shipped: { label: "Shipped", color: "#00d9ff" },
+  pending: { label: "Pending", color: "#ffd700" },
+  processing: { label: "Processing", color: "#fb923c" },
+  cancelled: { label: "Cancelled", color: "#fc3c44" },
 };
 
 const ORDER_STATUS = {
-  completed:          { label: "Completed",         bg: "bg-[#4ade80]/10", text: "text-[#4ade80]",   border: "border-[#4ade80]/20" },
-  partially_shipped:  { label: "Partially shipped", bg: "bg-[#00d9ff]/10", text: "text-[#00d9ff]",   border: "border-[#00d9ff]/20" },
-  pending:            { label: "Pending",            bg: "bg-[#ffd700]/10", text: "text-[#ffd700]",   border: "border-[#ffd700]/20" },
-  cancelled:          { label: "Cancelled",          bg: "bg-accent/10",    text: "text-accent",       border: "border-accent/20" },
+  completed: { label: "Completed", bg: "bg-[#4ade80]/10", text: "text-[#4ade80]", border: "border-[#4ade80]/20" },
+  partially_shipped: { label: "Partially shipped", bg: "bg-[#00d9ff]/10", text: "text-[#00d9ff]", border: "border-[#00d9ff]/20" },
+  pending: { label: "Pending", bg: "bg-[#ffd700]/10", text: "text-[#ffd700]", border: "border-[#ffd700]/20" },
+  cancelled: { label: "Cancelled", bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
 };
 
 const MERCH_STATUSES = [
-  { value: "pending",   label: "Pending",   color: "#ffd700" },
-  { value: "shipped",   label: "Shipped",   color: "#00d9ff" },
+  { value: "pending", label: "Pending", color: "#ffd700" },
+  { value: "shipped", label: "Shipped", color: "#00d9ff" },
   { value: "delivered", label: "Delivered", color: "#4ade80" },
 ];
 

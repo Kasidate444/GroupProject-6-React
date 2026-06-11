@@ -3,10 +3,11 @@ import Footer from "../../components/common/Footer";
 import { Link, useParams } from "react-router-dom";
 import {
   ControlBar,
-  GridLayout,
   LiveKitRoom,
-  ParticipantTile,
   RoomAudioRenderer,
+  TrackLoop,
+  TrackRefContext,
+  VideoTrack,
   useTracks,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
@@ -23,12 +24,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { apiGet, apiPatch, apiPost } from "../../lib/api";
 import LiveChat from "../components/LiveChat";
 import FollowButton from "../components/FollowButton";
-
-const getId = (value) => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  return value._id || value.id || "";
-};
 
 const normalizeLive = (live) => {
   if (!live) return null;
@@ -92,9 +87,8 @@ export default function LivePage() {
   const artist = useMemo(() => getArtist(live), [live]);
   const isLiveKit = live?.provider === "livekit";
   const isEnded = live?.status === "ended";
-  const userId = getId(user);
-  const artistId = getId(live?.artist_id || artist?._id);
-  const canHost = Boolean(isLiveKit && isLoggedIn && (user?.role === "admin" || (user?.role === "artist" && userId === artistId)));
+  const wantsHostAccess = Boolean(isLiveKit && isLoggedIn && (user?.role === "admin" || user?.role === "artist"));
+  const canPublishLive = Boolean(liveKitSession?.canPublish);
 
   useEffect(() => {
     if (!isLiveKit || !live || isEnded || !isLoggedIn) return;
@@ -104,7 +98,7 @@ export default function LivePage() {
       try {
         const response = await apiPost("/livekit/token", {
           roomName: live.livekit_room_name,
-          mode: canHost ? "host" : "viewer",
+          mode: wantsHostAccess ? "host" : "viewer",
         });
         if (!cancelled) setLiveKitSession(response.data || response);
       } catch (err) {
@@ -117,7 +111,7 @@ export default function LivePage() {
     return () => {
       cancelled = true;
     };
-  }, [canHost, isEnded, isLiveKit, isLoggedIn, live]);
+  }, [isEnded, isLiveKit, isLoggedIn, live, wantsHostAccess]);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -227,7 +221,6 @@ export default function LivePage() {
             <div className="relative aspect-video overflow-hidden rounded-xl bg-black shadow-2xl">
               {isLiveKit ? (
                 <LiveKitStage
-                  canHost={canHost}
                   error={liveKitError}
                   isEnded={isEnded}
                   isLoggedIn={isLoggedIn}
@@ -275,7 +268,7 @@ export default function LivePage() {
                   </Link>
                 )}
               </div>
-              {canHost && !isEnded && (
+              {canPublishLive && !isEnded && (
                 <button
                   type="button"
                   onClick={endLive}
@@ -296,7 +289,7 @@ export default function LivePage() {
             )}
           </div>
 
-          {!canHost && <LiveChat liveId={live._id} />}
+          {!canPublishLive && <LiveChat liveId={live._id} />}
         </div>
       </div>
       <Footer simple />
@@ -304,7 +297,7 @@ export default function LivePage() {
   );
 }
 
-function LiveKitStage({ canHost, error, isEnded, isLoggedIn, session, onDisconnected, onError }) {
+function LiveKitStage({ error, isEnded, isLoggedIn, session, onDisconnected, onError }) {
   if (isEnded) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center px-6 text-center">
@@ -345,20 +338,22 @@ function LiveKitStage({ canHost, error, isEnded, isLoggedIn, session, onDisconne
     );
   }
 
+  const canPublish = Boolean(session.canPublish);
+
   return (
     <LiveKitRoom
       token={session.token}
       serverUrl={session.serverUrl}
       connect
-      audio={session.canPublish}
-      video={session.canPublish}
+      audio={canPublish}
+      video={canPublish}
       data-lk-theme="default"
       className="h-full min-h-full"
       onDisconnected={onDisconnected}
       onError={(err) => onError(err.message || "LiveKit connection error.")}
     >
-      {canHost ? <HostLiveExperience /> : <ViewerOnlyExperience />}
-      {canHost && (
+      {canPublish ? <HostLiveExperience /> : <ViewerOnlyExperience />}
+      {canPublish && (
         <div className="pointer-events-none absolute left-4 top-14 rounded-md bg-black/55 px-3 py-1.5 text-[12px] font-semibold text-white/75 backdrop-blur-sm">
           Host mode
         </div>
@@ -380,9 +375,11 @@ function HostLiveExperience() {
     <div className="relative h-full min-h-full">
       <RoomAudioRenderer />
       {tracks.length > 0 ? (
-        <GridLayout tracks={tracks} className="h-full min-h-full pb-20">
-          <ParticipantTile />
-        </GridLayout>
+        <div className="grid h-full min-h-full grid-cols-1 gap-2 pb-20">
+          <TrackLoop tracks={tracks}>
+            <BroadcastVideoTile />
+          </TrackLoop>
+        </div>
       ) : (
         <div className="flex h-full min-h-full flex-col items-center justify-center px-6 pb-20 text-center">
           <Radio className="h-10 w-10 text-white/20" />
@@ -422,9 +419,11 @@ function ViewerOnlyExperience() {
     <div className="relative h-full min-h-full">
       <RoomAudioRenderer />
       {tracks.length > 0 ? (
-        <GridLayout tracks={tracks} className="h-full min-h-full">
-          <ParticipantTile />
-        </GridLayout>
+        <div className="grid h-full min-h-full grid-cols-1 gap-2">
+          <TrackLoop tracks={tracks}>
+            <BroadcastVideoTile />
+          </TrackLoop>
+        </div>
       ) : (
         <div className="flex h-full min-h-full flex-col items-center justify-center px-6 text-center">
           <Radio className="h-10 w-10 animate-pulse text-white/20" />
@@ -435,6 +434,20 @@ function ViewerOnlyExperience() {
         </div>
       )}
     </div>
+  );
+}
+
+function BroadcastVideoTile() {
+  return (
+    <TrackRefContext.Consumer>
+      {(trackRef) => (
+        trackRef ? (
+          <div className="h-full min-h-full overflow-hidden bg-black">
+            <VideoTrack trackRef={trackRef} className="h-full w-full object-contain" />
+          </div>
+        ) : null
+      )}
+    </TrackRefContext.Consumer>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import logoB from "../../assets/landing-page/logob.png";
 import RegisterSuccessModal from "./RegisterSuccessModal";
+import { ARTIST_GENRES } from "../../constants/genre.js";
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,12 +17,6 @@ const EyeOffIcon = () => (
     <line x1="1" y1="1" x2="23" y2="23" />
   </svg>
 );
-
-const ARTIST_GENRES = [
-  "Rock", "Alternative", "Electronic", "Metal", "Pop", "Jazz",
-  "Hip-hop / Rap", "Blues", "Classical", "J-pop", "K-pop", "Thai",
-  "R&B", "หมอลำ", "EDM", "Anime", "DnB", "Other",
-];
 
 function ArtistGenreSelect({ value, error, onChange }) {
   return (
