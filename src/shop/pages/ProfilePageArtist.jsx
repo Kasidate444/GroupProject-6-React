@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useFulfillment } from "../../contexts/FulfillmentContext";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { apiGet, apiUpload } from "../../lib/api";
+import { apiGet, apiPost, apiUpload } from "../../lib/api";
 import { artists, orders, products, users } from "../data/mockDb";
 import { getProductsByArtist } from "../data/helpers";
 import { useAudioPlayer } from "../context/AudioPlayerContext";
@@ -45,6 +45,7 @@ const getItemProductType = (item) => item.product_type || item.product_id?.type 
 
 export default function ProfilePageArtist() {
   const { user, isLoggedIn, authLoading } = useAuth();
+  const navigate = useNavigate();
   const mockArtist = artists.find((artist) => artist.user_id === user?._id) || artists[0];
   const [artistProfile, setArtistProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -64,6 +65,7 @@ export default function ProfilePageArtist() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState(null);
   const [profileMessage, setProfileMessage] = useState("");
+  const [liveStarting, setLiveStarting] = useState(false);
   const [profileForm, setProfileForm] = useState({
     display_name: "",
     location: "",
@@ -254,6 +256,28 @@ export default function ProfilePageArtist() {
     }
   };
 
+  const handleStartLive = async () => {
+    if (liveStarting) return;
+    setLiveStarting(true);
+    setProfileStatus(null);
+    setProfileMessage("");
+
+    try {
+      const response = await apiPost("/lives", {
+        title: `${currentArtist?.name || user?.username || "Artist"} is live`,
+        description: "Live session on Audtlist.",
+        thumbnail_url: bannerUrl || avatarUrl || currentArtist?.banner_url || "",
+      });
+      const live = response.data || response;
+      navigate(`/live/${live._id}`);
+    } catch (error) {
+      setProfileStatus("error");
+      setProfileMessage(error.message || "Unable to start live.");
+    } finally {
+      setLiveStarting(false);
+    }
+  };
+
   const filteredProducts = artistProducts.filter((product) => {
     if (activeTab === "album") return product.type === "album";
     if (activeTab === "single") return product.type === "single";
@@ -388,6 +412,14 @@ export default function ProfilePageArtist() {
                 Edit profile
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleStartLive}
+              disabled={liveStarting}
+              className="rounded-full border border-red-400/30 bg-red-400/12 px-5 py-3 text-[13px] font-bold text-red-100 transition-colors hover:bg-red-400/18 disabled:cursor-wait disabled:opacity-55"
+            >
+              {liveStarting ? "Starting..." : "Start live"}
+            </button>
             <div className="relative">
               <button
                 type="button"
