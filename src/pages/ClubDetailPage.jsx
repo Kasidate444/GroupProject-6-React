@@ -1,9 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import Footer from "../components/common/Footer";
 import Nav from "../components/common/Nav";
+import ScrollingText from "../components/landing/ScrollingText";
 import collabImg from "../assets/landing-page/cxa.jpg";
 import creativeMarketLogo from "../assets/landing-page/creative-market-logo.svg";
-import barImg from "../assets/landing-page/bar.png";
 import { clubs } from "../data/clubs";
 
 export default function ClubDetailPage() {
@@ -30,13 +30,6 @@ export default function ClubDetailPage() {
   return (
     <div className="min-h-screen bg-[#03030f] font-['Plus_Jakarta_Sans',sans-serif] text-white">
       <Nav />
-
-      <img
-        src={barImg}
-        alt=""
-        aria-hidden="true"
-        className="h-10 w-full object-cover"
-      />
 
       {/* Hero */}
       <div
@@ -71,12 +64,7 @@ export default function ClubDetailPage() {
         </div>
       </div>
 
-      <img
-        src={barImg}
-        alt=""
-        aria-hidden="true"
-        className="h-10 w-full object-cover"
-      />
+      <ScrollingText />
 
       {/* About */}
       <div className="mx-[5%] my-10 flex flex-col gap-4 rounded-2xl border border-white/8 bg-[#0c0c1e] p-6 md:mx-[10%] md:my-14 md:p-10">
