@@ -203,24 +203,34 @@ export default function AboutPage() {
           {team.map((member) => (
             <div
               key={member.name}
-              className="bg-bg-card rounded-2xl p-6 border border-white/8"
+              className="group relative bg-bg-card rounded-2xl p-6 border border-white/8 overflow-hidden cursor-default"
             >
               <div className="w-full aspect-square rounded-xl mb-4 overflow-hidden ring-2 ring-accent/40">
                 <img
                   src={member.avatar}
                   alt={member.name}
-                  className={`w-full h-full object-cover transition-transform ${member.zoom ? "scale-110" : ""}`}
+                  className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${member.zoom ? "scale-110" : ""}`}
                 />
               </div>
               <h3 className="text-white font-semibold text-[15px] mb-0.5">
                 {member.name}
               </h3>
-              <p className="text-accent text-[12px] font-medium mb-3">
+              <p className="text-accent text-[12px] font-medium">
                 {member.role}
               </p>
-              <p className="text-white/50 text-[13px] leading-relaxed">
-                {member.bio}
-              </p>
+              {/* Bio overlay on hover */}
+              <div className="absolute inset-0 rounded-2xl bg-bg-card/95 backdrop-blur-sm flex flex-col justify-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-accent/20">
+                <div className="w-8 h-px bg-accent mb-3" />
+                <h3 className="text-white font-semibold text-[14px] mb-0.5">
+                  {member.name}
+                </h3>
+                <p className="text-accent text-[11px] font-medium mb-3">
+                  {member.role}
+                </p>
+                <p className="text-white/65 text-[12px] leading-relaxed">
+                  {member.bio}
+                </p>
+              </div>
             </div>
           ))}
         </div>
