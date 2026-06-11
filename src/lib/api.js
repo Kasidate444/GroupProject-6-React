@@ -1,11 +1,24 @@
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 
+const getStoredToken = () => {
+  try {
+    return JSON.parse(localStorage.getItem("session") || "null")?.token || null;
+  } catch {
+    return null;
+  }
+};
+
+const buildAuthHeaders = () => {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const apiRequest = async (path, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...buildAuthHeaders(),
       ...options.headers,
     },
     ...options,
@@ -42,7 +55,9 @@ export const apiDelete = (path) => apiRequest(path, {
 export const apiUpload = async (path, formData, method = "POST") => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    credentials: "include",
+    headers: {
+      ...buildAuthHeaders(),
+    },
     body: formData,
   });
 

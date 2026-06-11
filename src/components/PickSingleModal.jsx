@@ -8,6 +8,7 @@ export default function PickSingleModal({ isOpen, onClose, onPick, excludeIds = 
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isOpen) { setSelectedIds(new Set()); setSearch(""); }
   }, [isOpen]);
 

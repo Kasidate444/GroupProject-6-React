@@ -1,5 +1,4 @@
 import PropTypes from 'prop-types';
-import { PAYMENT_METHODS } from './constants.js';
 
 /**
  * QRPromptPayDisplay Component

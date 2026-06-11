@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 
 const STORAGE_KEY = "audjlist_fulfillment";
@@ -24,7 +25,9 @@ export function FulfillmentProvider({ children }) {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
           setOverrides(JSON.parse(e.newValue));
-        } catch {}
+        } catch {
+          // Ignore malformed storage events from other tabs.
+        }
       }
     };
     window.addEventListener("storage", handler);

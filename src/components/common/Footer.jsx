@@ -1,38 +1,7 @@
-import cassetteImg from "../../assets/landing-page/cas3.avif";
 import logoA from "../../assets/landing-page/logoa.png";
-import vinylImg from "../../assets/landing-page/vin.avif";
-import cdsImg from "../../assets/landing-page/cd.avif";
-import tshirtImg from "../../assets/landing-page/T.webp";
 import { Link } from "react-router-dom";
 
-const genres = [
-  "Rock",
-  "Alternative",
-  "Electronic",
-  "Metal",
-  "Pop",
-  "Jazz",
-  "Hip-hop / Rap",
-  "Blues",
-  "Classical",
-  "J-pop",
-  "K-pop",
-  "Thai",
-  "R&B",
-  "Morlam",
-  "EDM",
-  "Anime",
-  "DnB",
-];
-
-const categories = [
-  { title: "Cassettes", img: cassetteImg, to: "/shop?category=cassette" },
-  { title: "Vinyl", img: vinylImg, to: "/shop?category=vinyl" },
-  { title: "CDs", img: cdsImg, to: "/shop?category=cd" },
-  { title: "T-Shirts", img: tshirtImg, to: "/shop?category=tshirt" },
-];
-
-export default function Footer({ simple = false }) {
+export default function Footer() {
   return (
     <>
 
