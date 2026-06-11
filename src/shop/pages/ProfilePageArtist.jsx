@@ -670,7 +670,7 @@ function ArtistOverview({ artist, orders: dashboardOrders, ordersError, onShowFa
       {/* 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ Dashboard header card 鬮ｫ・ｨ雋ょ庄ﾂ鬮ｫ・ｨ雋ょ庄ﾂ */}
       <div className="rounded-2xl border border-white/10 bg-bg-card px-6 py-5 flex items-center justify-between gap-6">
         <div>
-          <p className="text-[12px] text-white/35">{timeGreeting} 郢晢ｽｻ郢ｧ謇假ｽｽ・ｽ繝ｻ・ｷ {dateStr}</p>
+          <p className="text-[12px] text-white/35">{timeGreeting} {dateStr}</p>
           <h2 className="text-[22px] font-bold text-white mt-0.5">{artist?.name}</h2>
         </div>
         <div className="flex items-center gap-6 shrink-0">
