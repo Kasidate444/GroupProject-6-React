@@ -4,7 +4,7 @@
 
 **DROP YOUR SOUND INTO THE ZONE**
 
-*A marketplace for independent artists — music, merch, and live streams, all in one place.*
+_A marketplace for independent artists — music, merch, and live streams, all in one place._
 
 ---
 
@@ -48,6 +48,7 @@
 ## Features
 
 ### 🎵 Music Store
+
 - Browse products by category: **Digital**, **Vinyl**, **CD**, **Cassette**, **T-shirt**
 - Filter by genre (multi-select), free-text search
 - Product detail page with audio preview and variant selection
@@ -55,18 +56,21 @@
 - Fixed shipping cost only applied when physical items are in cart
 
 ### 💳 Checkout & Payments
+
 - Multi-step checkout: cart review → shipping info → payment
 - Two payment methods: **Credit / Debit Card** and **QR PromptPay**
 - Discount code input
 - Order confirmation page with order summary
 
 ### 🎤 Artist System
+
 - Two user roles: **Fan** and **Artist**
 - Artist dashboard for uploading music (singles, albums) and merch
 - Public artist profile page showing releases, merch, and bio
 - Follow / unfollow artists with persistent follow state
 
 ### 📻 Live Streaming
+
 - Simulated live stream page (`/live/:id`) with video sync
 - Live badge, real-time viewer count, elapsed time display
 - Volume control with mute toggle
@@ -74,17 +78,20 @@
 - Prevents seeking and pausing to simulate a real broadcast
 
 ### 🔊 Audio Player
+
 - Persistent mini player at the bottom of the screen
 - Plays across page navigation
 - Context-based audio state shared globally
 
 ### 👤 Authentication
+
 - Login and registration for Fans and Artists
 - Session restoration via `/auth/me` API call on load
 - Forgot password flow
 - Profile settings page
 
 ### 🌐 Other Pages
+
 - Landing page: hero banner, best-sellers, daily feed, radio section, stats, featured artists
 - About page with team members and company values
 - Community / Club page
@@ -99,24 +106,24 @@
 
 ### Frontend
 
-| Technology | Version | Purpose |
-|---|---|---|
-| React | ^19.2.5 | UI framework |
-| Vite | ^8.0.10 | Build tool & dev server |
-| React Router DOM | ^7.15.1 | Client-side routing |
-| Tailwind CSS | ^4.3.0 | Utility-first CSS |
-| Socket.io-client | ^4.8.3 | Realtime live chat |
-| Lucide React | ^1.3.0 | Icon library |
-| Plus Jakarta Sans | — | Primary typeface (Google Fonts) |
+| Technology        | Version | Purpose                         |
+| ----------------- | ------- | ------------------------------- |
+| React             | ^19.2.5 | UI framework                    |
+| Vite              | ^8.0.10 | Build tool & dev server         |
+| React Router DOM  | ^7.15.1 | Client-side routing             |
+| Tailwind CSS      | ^4.3.0  | Utility-first CSS               |
+| Socket.io-client  | ^4.8.3  | Realtime live chat              |
+| Lucide React      | ^1.3.0  | Icon library                    |
+| Plus Jakarta Sans | —       | Primary typeface (Google Fonts) |
 
 ### Backend (separate repository)
 
-| Technology | Purpose |
-|---|---|
-| Node.js + Express | REST API server |
-| MongoDB | Primary document database (users, artists, products, orders) |
-| PostgreSQL | Relational data |
-| Socket.io | Realtime events (live chat, session sync) |
+| Technology        | Purpose                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| Node.js + Express | REST API server                                              |
+| MongoDB           | Primary document database (users, artists, products, orders) |
+| PostgreSQL        | Relational data                                              |
+| Socket.io         | Realtime events (live chat, session sync)                    |
 
 ---
 
@@ -170,32 +177,32 @@ GroupProject-6-React/
 
 ## Pages & Routes
 
-| Route | Component | Description |
-|---|---|---|
-| `/` | `LandingPage` | Hero, best-sellers, daily feed, radio, stats, featured artists |
-| `/login` | `LoginPage` | Email + password login |
-| `/register/fan` | `FanRegisterPage` | New fan account registration |
-| `/register/artist` | `ArtistRegisterPage` | New artist account registration |
-| `/forgot-password` | `ForgotPasswordPage` | Password reset request |
-| `/about` | `About` | Company story, team, values |
-| `/shop` | `ShopPage` | Browse all products with filters |
-| `/discover/:genres` | `ShopPage` | Pre-filtered by genre slug(s) |
-| `/product/:slug` | `ProductDetailPage` | Product info, audio preview, add to cart |
-| `/checkout` | `CheckoutPage` | Multi-step checkout flow |
-| `/order-confirmed` | `OrderConfirmedPage` | Post-purchase confirmation |
-| `/artist/:slug` | `ArtistPage` | Public artist profile |
-| `/profile` | `ProfilePage` | Fan profile & purchase history |
-| `/artist` | `ProfilePageArtist` | Artist dashboard (upload, analytics) |
-| `/admin` | `ProfilePageAdmin` | Admin dashboard |
-| `/profilesetting` | `ProfileSetting` | Edit profile, change password |
-| `/live/:id` | `LivePage` | Live stream + live chat |
-| `/gift-cards` | `GiftCardsPage` | Gift card purchase |
-| `/club` | `ClubPage` | Community / club page |
-| `/help` | `HelpPage` | Help centre |
-| `/help/:slug` | `HelpArticlePage` | Individual help article |
-| `/terms` | `TermsConditions` | Terms of service |
-| `/article1` `/article2` `/article3` | `Article*Page` | Editorial articles |
-| `*` | `NotFoundPage` | 404 |
+| Route                               | Component            | Description                                                    |
+| ----------------------------------- | -------------------- | -------------------------------------------------------------- |
+| `/`                                 | `LandingPage`        | Hero, best-sellers, daily feed, radio, stats, featured artists |
+| `/login`                            | `LoginPage`          | Email + password login                                         |
+| `/register/fan`                     | `FanRegisterPage`    | New fan account registration                                   |
+| `/register/artist`                  | `ArtistRegisterPage` | New artist account registration                                |
+| `/forgot-password`                  | `ForgotPasswordPage` | Password reset request                                         |
+| `/about`                            | `About`              | Company story, team, values                                    |
+| `/shop`                             | `ShopPage`           | Browse all products with filters                               |
+| `/discover/:genres`                 | `ShopPage`           | Pre-filtered by genre slug(s)                                  |
+| `/product/:slug`                    | `ProductDetailPage`  | Product info, audio preview, add to cart                       |
+| `/checkout`                         | `CheckoutPage`       | Multi-step checkout flow                                       |
+| `/order-confirmed`                  | `OrderConfirmedPage` | Post-purchase confirmation                                     |
+| `/artist/:slug`                     | `ArtistPage`         | Public artist profile                                          |
+| `/profile`                          | `ProfilePage`        | Fan profile & purchase history                                 |
+| `/artist`                           | `ProfilePageArtist`  | Artist dashboard (upload, analytics)                           |
+| `/admin`                            | `ProfilePageAdmin`   | Admin dashboard                                                |
+| `/profilesetting`                   | `ProfileSetting`     | Edit profile, change password                                  |
+| `/live/:id`                         | `LivePage`           | Live stream + live chat                                        |
+| `/gift-cards`                       | `GiftCardsPage`      | Gift card purchase                                             |
+| `/club`                             | `ClubPage`           | Community / club page                                          |
+| `/help`                             | `HelpPage`           | Help centre                                                    |
+| `/help/:slug`                       | `HelpArticlePage`    | Individual help article                                        |
+| `/terms`                            | `TermsConditions`    | Terms of service                                               |
+| `/article1` `/article2` `/article3` | `Article*Page`       | Editorial articles                                             |
+| `*`                                 | `NotFoundPage`       | 404                                                            |
 
 ---
 
@@ -203,16 +210,16 @@ GroupProject-6-React/
 
 Audtlist uses React Context for all shared state. No external state library is used.
 
-| Context | Location | Responsibility |
-|---|---|---|
-| `AuthContext` | `src/shop/context/AuthContext.jsx` | User session, login, logout, register |
-| `CartContext` | `src/shop/context/CartContext.jsx` | Cart items, totals, shipping, cart drawer open/close |
-| `WishlistContext` | `src/shop/context/WishlistContext.jsx` | Saved/liked products (persisted in localStorage) |
-| `CollectionContext` | `src/shop/context/CollectionContext.jsx` | User's owned products |
-| `AudioPlayerContext` | `src/shop/context/AudioPlayerContext.jsx` | Global audio playback state for MiniPlayer |
-| `FollowContext` | `src/contexts/FollowContext.jsx` | Follow/unfollow artist state |
-| `FulfillmentContext` | `src/contexts/FulfillmentContext.jsx` | Order fulfillment status overrides (cross-tab sync via localStorage) |
-| `AudioContext` | `src/contexts/AudioContext.jsx` | App-level audio context |
+| Context              | Location                                  | Responsibility                                                       |
+| -------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| `AuthContext`        | `src/shop/context/AuthContext.jsx`        | User session, login, logout, register                                |
+| `CartContext`        | `src/shop/context/CartContext.jsx`        | Cart items, totals, shipping, cart drawer open/close                 |
+| `WishlistContext`    | `src/shop/context/WishlistContext.jsx`    | Saved/liked products (persisted in localStorage)                     |
+| `CollectionContext`  | `src/shop/context/CollectionContext.jsx`  | User's owned products                                                |
+| `AudioPlayerContext` | `src/shop/context/AudioPlayerContext.jsx` | Global audio playback state for MiniPlayer                           |
+| `FollowContext`      | `src/contexts/FollowContext.jsx`          | Follow/unfollow artist state                                         |
+| `FulfillmentContext` | `src/contexts/FulfillmentContext.jsx`     | Order fulfillment status overrides (cross-tab sync via localStorage) |
+| `AudioContext`       | `src/contexts/AudioContext.jsx`           | App-level audio context                                              |
 
 ### API Layer
 
@@ -278,22 +285,22 @@ Create a `.env` file in the project root:
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-| Variable | Default | Description |
-|---|---|---|
+| Variable            | Default                 | Description                                      |
+| ------------------- | ----------------------- | ------------------------------------------------ |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Base URL of the backend API and Socket.io server |
 
 ---
 
 ## Team
 
-| Name | Role |
-|---|---|
-| Akkarawin Suchaichit | Tech Leader & Co-Founder |
-| Jinvaramas Piklunklin | Product Lead & Co-Founder |
-| Kasidate Sae-eaw | Tech Agile Coach |
-| Thaweeratch Khongrachata | Product Designer |
-| Mata Chobmee | Backend Engineer |
-| Piyawat Kamton | Team Coordinator |
+| Name                     | Role                      |
+| ------------------------ | ------------------------- |
+| Akkarawin Suchaichit     | Tech Leader & Co-Founder  |
+| Jinvaramas Piklunklin    | Product Lead & Co-Founder |
+| Kasidate Sae-eaw         | Tech Agile Coach          |
+| Thaweeratch Khongrachata | Product Designer          |
+| Mata Chobmee             | Backend Engineer          |
+| Piyawat Kamton           | Team Coordinator          |
 
 ---
 
@@ -306,6 +313,11 @@ Special thanks and credits to the artists, platforms, and creators that inspired
 - LANDOKMAI
 - Season Five
 - Baby monster
+- Paramore
+- The Cab
+- Horizonsupply
+- Red Hot Chili Peppers
+- LAUV
 
 ---
 
@@ -321,7 +333,7 @@ If any content owner would like their material to be removed, please contact us 
 
 <div align="center">
 
-**AUDTLIST** — *Your Sound, Your Space.*
+**AUDTLIST** — _Your Sound, Your Space._
 
 © 2026 Audtlist. All rights reserved.
 
