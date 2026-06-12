@@ -1,5 +1,16 @@
 <div align="center">
 
+---
+
+## Disclaimer
+
+All images, music, artist names, and related media used in this project belong to their respective owners and copyright holders. We do not claim ownership of any third-party content included on this website.
+
+No copyright infringement is intended, and this project is not used for commercial purposes or profit.
+
+If any content owner would like their material to be removed, please contact us and we will take appropriate action immediately.
+
+
 # AUDTLIST
 
 **DROP YOUR SOUND INTO THE ZONE**
@@ -319,15 +330,6 @@ Special thanks and credits to the artists, platforms, and creators that inspired
 - Red Hot Chili Peppers
 - LAUV
 
----
-
-## Disclaimer
-
-All images, music, artist names, and related media used in this project belong to their respective owners and copyright holders. We do not claim ownership of any third-party content included on this website.
-
-No copyright infringement is intended, and this project is not used for commercial purposes or profit.
-
-If any content owner would like their material to be removed, please contact us and we will take appropriate action immediately.
 
 ---
 
